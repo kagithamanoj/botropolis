@@ -2,7 +2,9 @@
 
 **A company of bots.**
 
-An experiment: organize AI agents like company departments instead of a pile
-of scripts. One orchestrator (the CEO) routes work to specialist agents.
+A multi-agent framework where specialized AI agents are organized like
+company departments. A CEO orchestrator breaks requests into pieces and
+routes them to the right departments.
 
-Early days. Starting with a single research agent and growing from there.
+Early work in progress. Departments, a model registry, and a training
+pipeline are on the way.

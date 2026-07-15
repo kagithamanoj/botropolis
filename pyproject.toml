@@ -1,4 +1,32 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "botropolis"
 version = "0.1.0"
+description = "Botropolis: a company of bots. A multi-agent framework where specialized AI agents work like company departments."
+readme = "README.md"
 requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Manoj Kumar" }]
+keywords = ["agents", "multi-agent", "llm", "orchestration", "ai"]
+dependencies = [
+    "pyyaml",
+    "requests",
+    "fastapi",
+    "uvicorn",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.urls]
+Homepage = "https://github.com/kagithamanoj/botropolis"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["botropolis*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
