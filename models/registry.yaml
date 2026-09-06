@@ -1,0 +1,78 @@
+# Botropolis model registry.
+#
+# Two sections:
+#   base_models: off the shelf models agents can call, grouped by provider.
+#   fine_tunes:  models trained or planned for Botropolis agents.
+#
+# To point an agent at a model, set the `model:` field in its spec.yaml
+# (botropolis/agents/<dept>/<agent>.yaml) to the model id below.
+# API keys come from the environment, see docs/adding-models.md.
+
+base_models:
+  - id: gpt-4o
+    provider: openai
+    context_window: 128000
+    notes: General purpose default. Good instruction following, solid tool use.
+
+  - id: claude-sonnet-4-5
+    provider: anthropic
+    context_window: 200000
+    notes: Strong reasoning and long context. Used by Analyst, Reviewer, SecAuditor.
+
+  - id: gemini-2.5-pro
+    provider: google
+    context_window: 1000000
+    notes: Huge context window. Good fit for MedResearcher and MLEngineer reading long docs.
+
+  - id: llama-3.3-70b
+    provider: ollama
+    context_window: 128000
+    notes: Open weights, runs locally via Ollama. No API key needed, data stays on your machine.
+
+  - id: qwen3
+    provider: ollama
+    context_window: 256000
+    notes: Open weights via Ollama. Strong multilingual and coding performance for its size.
+
+  - id: mistral-large
+    provider: ollama
+    context_window: 128000
+    notes: Open weights via Ollama. Good European language coverage.
+
+# ---------------------------------------------------------------------------
+# HOW TO REGISTER A FINE-TUNE
+#
+# Add one entry per trained model. Fill in whichever location fields apply:
+#   hf_hub:     Hugging Face repo id, e.g. "kagithamanoj/botropolis-scout-7b"
+#   local_path: directory with safetensors weights, e.g. "./checkpoints/botropolis-scout-7b"
+#   gguf_path:  single quantized file for llama.cpp, e.g. "./checkpoints/botropolis-scout-7b-q4.gguf"
+#   ollama_tag: tag after `ollama create`, e.g. "botropolis-scout-7b"
+#
+# status is one of: planned, training, ready, archived.
+# Keep a model card for every fine-tune in models/cards/.
+# ---------------------------------------------------------------------------
+
+fine_tunes:
+  - id: botropolis-scout-7b
+    status: planned
+    base_model: llama-3.1-8b
+    trained_for: Scout (research department, web research specialist)
+    dataset: training/datasets/sample.jsonl
+    config: training/configs/lora_scout.yaml
+    # hf_hub: "kagithamanoj/botropolis-scout-7b"
+    # local_path: "./checkpoints/botropolis-scout-7b"
+    # gguf_path: "./checkpoints/botropolis-scout-7b-q4_k_m.gguf"
+    # ollama_tag: "botropolis-scout-7b"
+    notes: LoRA fine-tune to make Scout decompose questions and cite carefully. Not trained yet.
+
+  - id: botropolis-coder-7b
+    status: planned
+    base_model: qwen3-8b
+    trained_for: Coder (code department, software engineer)
+    dataset: null
+    config: null
+    # hf_hub: "kagithamanoj/botropolis-coder-7b"
+    # local_path: "./checkpoints/botropolis-coder-7b"
+    # gguf_path: "./checkpoints/botropolis-coder-7b-q4_k_m.gguf"
+    # ollama_tag: "botropolis-coder-7b"
+    notes: Placeholder for a future code specialist fine-tune. Dataset not collected yet.
