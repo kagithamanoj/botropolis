@@ -1,0 +1,26 @@
+# Example supervised fine-tuning config. Copy this to start a new run.
+model:
+  base_model: "llama-3.1-8b"   # HF id or local path
+  trust_remote_code: false
+
+dataset:
+  path: "training/datasets/sample.jsonl"
+  format: "chat"                # chat = OpenAI style messages per row
+  eval_split: 0.1               # fraction held out for eval
+
+training:
+  epochs: 3
+  learning_rate: 2.0e-5
+  batch_size: 4
+  gradient_accumulation_steps: 4
+  max_seq_length: 2048
+  warmup_ratio: 0.03
+  weight_decay: 0.01
+  seed: 42
+
+output:
+  dir: "checkpoints/sft-run-01"
+  save_steps: 200
+  logging_steps: 25
+  push_to_hub: false
+  hub_repo: null                # e.g. "kagithamanoj/botropolis-scout-7b"
