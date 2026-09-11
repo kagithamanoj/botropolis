@@ -1,0 +1,36 @@
+# LoRA fine-tune config for the Scout research agent.
+# Goal: teach a small local model to decompose questions, gather evidence
+# from multiple angles, and separate facts from inference, in Scout's voice.
+model:
+  base_model: "llama-3.1-8b"
+  trust_remote_code: false
+
+peft:
+  method: "lora"
+  r: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules: ["q_proj", "k_proj", "v_proj", "o_proj"]
+  bias: "none"
+
+dataset:
+  path: "training/datasets/sample.jsonl"
+  format: "chat"
+  eval_split: 0.1
+
+training:
+  epochs: 3
+  learning_rate: 1.0e-4          # LoRA typically uses a higher LR than full SFT
+  batch_size: 4
+  gradient_accumulation_steps: 8
+  max_seq_length: 2048
+  warmup_ratio: 0.03
+  weight_decay: 0.0
+  seed: 42
+
+output:
+  dir: "checkpoints/botropolis-scout-7b"
+  save_steps: 100
+  logging_steps: 25
+  push_to_hub: false
+  hub_repo: null                # e.g. "kagithamanoj/botropolis-scout-7b"
