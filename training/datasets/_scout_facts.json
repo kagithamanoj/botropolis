@@ -1,0 +1,2104 @@
+{
+ "topics": [
+  {
+   "category": "cs",
+   "facts": [
+    "Binary search finds an item in a sorted array by repeatedly halving the search interval.",
+    "It runs in O(log n) time and O(1) extra space when written iteratively.",
+    "The array must be sorted first; on unsorted data it returns wrong answers.",
+    "Each step compares the middle element and discards half of what remains."
+   ],
+   "topic": "Binary search"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "A hash table stores key-value pairs by mapping keys to buckets with a hash function.",
+    "Collisions are handled by chaining (linked lists in buckets) or open addressing (probing).",
+    "Average lookup, insert, and delete are O(1); worst case degrades to O(n) with pathological hashing.",
+    "A good hash function spreads keys uniformly; a bad one clusters them."
+   ],
+   "topic": "Hash tables"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "Quicksort picks a pivot, partitions the array around it, and recurses on both sides.",
+    "Average time is O(n log n); worst case is O(n^2) with bad pivots on sorted input.",
+    "It sorts in place but is not stable by default.",
+    "Random or median-of-three pivot choice makes the worst case unlikely in practice."
+   ],
+   "topic": "Quicksort"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "Merge sort divides the array in half, sorts each half, and merges the results.",
+    "It guarantees O(n log n) time and is stable.",
+    "It needs O(n) extra space for the merge step.",
+    "It works well on linked lists, where merging needs no extra allocation."
+   ],
+   "topic": "Merge sort"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "Big-O describes how runtime or memory grows as input size grows, ignoring constants.",
+    "O(1) is constant, O(log n) logarithmic, O(n) linear, O(n log n) linearithmic, O(n^2) quadratic.",
+    "By convention it describes the worst case unless stated otherwise.",
+    "It compares algorithms at scale; for tiny inputs, constants and simplicity can win."
+   ],
+   "topic": "Big-O notation"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "A recursive function solves a problem by calling itself on smaller inputs.",
+    "Every recursion needs a base case, or it never stops.",
+    "Each call adds a stack frame; deep recursion can overflow the call stack.",
+    "Any recursion can be rewritten with an explicit stack and a loop."
+   ],
+   "topic": "Recursion"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "Dynamic programming solves overlapping subproblems once and reuses the results.",
+    "It needs optimal substructure: the optimal solution contains optimal solutions to subproblems.",
+    "Memoization is top-down; tabulation is bottom-up.",
+    "Classic examples are Fibonacci, knapsack, and edit distance."
+   ],
+   "topic": "Dynamic programming"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "A stack is last-in, first-out: push adds to the top, pop removes from the top.",
+    "Push and pop are O(1).",
+    "Call stacks, undo history, and expression evaluation all use stacks.",
+    "A stack overflow happens when the call stack grows past its limit."
+   ],
+   "topic": "Stacks"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "A queue is first-in, first-out: enqueue at the back, dequeue from the front.",
+    "Enqueue and dequeue are O(1) with a proper implementation.",
+    "Task schedulers, print spoolers, and breadth-first search use queues.",
+    "A deque allows efficient push and pop on both ends."
+   ],
+   "topic": "Queues"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "A linked list is nodes where each node points to the next (and previous, in a doubly linked list).",
+    "Insert and delete are O(1) if you already hold the node; search is O(n).",
+    "They use more memory per element than arrays because of the pointers.",
+    "Reversing a linked list in place is a classic interview problem."
+   ],
+   "topic": "Linked lists"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "In a binary search tree, left children are smaller and right children are larger than the node.",
+    "Search, insert, and delete are O(log n) when the tree stays balanced.",
+    "A degenerate tree (inserting sorted data) degrades to O(n), a linked list in disguise.",
+    "Self-balancing variants like AVL and red-black trees fix this with rotations."
+   ],
+   "topic": "Binary search trees"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "A graph is nodes connected by edges, which may be directed or undirected, weighted or not.",
+    "Adjacency lists suit sparse graphs; adjacency matrices suit dense ones.",
+    "Breadth-first search uses a queue; depth-first search uses a stack or recursion.",
+    "Both traversals run in O(V + E) time."
+   ],
+   "topic": "Graphs"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "BFS explores level by level and finds the shortest path in unweighted graphs.",
+    "DFS goes as deep as possible before backtracking and uses less memory.",
+    "BFS needs to store the frontier; DFS needs only the current path.",
+    "Use BFS for shortest path, DFS for connectivity, cycles, and topological order."
+   ],
+   "topic": "Breadth-first vs depth-first search"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "Dijkstra finds the shortest path from a source in graphs with non-negative edge weights.",
+    "It is greedy: it always expands the closest unvisited node.",
+    "With a binary heap it runs in O((V + E) log V).",
+    "Negative weights break it; Bellman-Ford handles those at higher cost."
+   ],
+   "topic": "Dijkstra's algorithm"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "TCP is connection-oriented: a handshake (SYN, SYN-ACK, ACK) opens the connection.",
+    "It guarantees reliable, ordered delivery by retransmitting lost segments.",
+    "Flow control and congestion control adapt the sending rate to the network.",
+    "The reliability costs latency; that is the fundamental trade against UDP."
+   ],
+   "topic": "TCP"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "UDP sends datagrams with no connection setup and no delivery guarantees.",
+    "Packets may arrive out of order, duplicated, or not at all.",
+    "The low overhead makes it right for video calls, games, and DNS.",
+    "Applications that need reliability must build it on top of UDP themselves."
+   ],
+   "topic": "UDP"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "DNS maps human-readable domain names to IP addresses.",
+    "It is hierarchical: root servers, top-level domains, then authoritative servers.",
+    "Resolvers cache answers; each record has a TTL controlling cache lifetime.",
+    "Most queries go over UDP port 53 for speed."
+   ],
+   "topic": "DNS"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "HTTP is a request/response protocol; the client asks, the server answers.",
+    "It is stateless: each request stands alone, so sessions need cookies or tokens.",
+    "Methods include GET, POST, PUT, PATCH, and DELETE.",
+    "Status codes group by hundreds: 2xx success, 3xx redirect, 4xx client error, 5xx server error."
+   ],
+   "topic": "HTTP"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "REST is an architectural style, not a standard: resources addressed by URLs, manipulated with HTTP verbs.",
+    "It is stateless; every request carries its own context.",
+    "JSON over HTTP is the dominant convention.",
+    "Good REST APIs use nouns for resources and verbs for actions."
+   ],
+   "topic": "REST"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "TLS encrypts traffic between client and server; HTTPS is HTTP over TLS.",
+    "The handshake negotiates a cipher suite and establishes shared keys.",
+    "Certificates let the client verify it is talking to the real server.",
+    "TLS 1.3 simplified the handshake and removed weak options."
+   ],
+   "topic": "TLS"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "Git is distributed: every clone holds the full history.",
+    "A commit is a snapshot; a branch is a lightweight movable pointer.",
+    "Merging combines histories; rebasing rewrites commits onto a new base.",
+    "Never rewrite history that others have already pulled."
+   ],
+   "topic": "Git"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "Docker containers share the host kernel, which makes them lighter than virtual machines.",
+    "Images are built in layers; each Dockerfile instruction adds one.",
+    "Containers are ephemeral by design; persist data in volumes.",
+    "One main process per container is the convention."
+   ],
+   "topic": "Docker"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "Kubernetes orchestrates containers across a cluster of machines.",
+    "A pod is the smallest deployable unit, usually one container.",
+    "Deployments keep the desired number of replicas running; services expose them.",
+    "You declare desired state in YAML and controllers converge toward it."
+   ],
+   "topic": "Kubernetes"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "Continuous integration means merging and testing code frequently, usually on every push.",
+    "Continuous delivery automates building and releasing so software is always shippable.",
+    "Pipelines typically run lint, tests, and security scans before deploy.",
+    "Small frequent releases are safer than rare big ones."
+   ],
+   "topic": "CI/CD"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "OAuth 2.0 is delegated authorization: it lets an app act on your behalf without your password.",
+    "The app gets an access token with limited scope and lifetime.",
+    "The authorization code flow is the standard for web apps.",
+    "OAuth 2.0 alone does not prove identity; OpenID Connect adds authentication on top."
+   ],
+   "topic": "OAuth 2.0"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "A JWT has three base64 parts: header, payload, signature.",
+    "It is signed, not encrypted: anyone can read the payload, but only the key holder can sign.",
+    "Servers verify the signature instead of looking up a session, which makes auth stateless.",
+    "Always check the expiry and never put secrets in the payload."
+   ],
+   "topic": "JWT"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "INNER JOIN returns only rows with matches on both sides.",
+    "LEFT JOIN keeps every row from the left table, filling NULLs where nothing matches.",
+    "FULL JOIN keeps everything from both sides.",
+    "CROSS JOIN is the cartesian product and is rarely what you want."
+   ],
+   "topic": "SQL joins"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "ACID stands for Atomicity, Consistency, Isolation, Durability.",
+    "Atomicity means all-or-nothing: a transaction never half-applies.",
+    "Isolation means concurrent transactions do not see each other's partial work.",
+    "Durability means committed data survives crashes."
+   ],
+   "topic": "ACID transactions"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "CAP says a distributed data store can guarantee at most two of Consistency, Availability, and Partition tolerance.",
+    "Since partitions happen, the real choice is between consistency and availability during a partition.",
+    "It is a simplification; real systems make finer trade-offs (see PACELC).",
+    "Use it to frame the trade-off, not to classify whole databases."
+   ],
+   "topic": "CAP theorem"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "Normalization organizes tables to reduce redundancy and update anomalies.",
+    "First normal form means atomic values, no repeating groups.",
+    "Second normal form removes partial dependencies on part of a key.",
+    "Third normal form removes transitive dependencies; beyond that, denormalize deliberately for read speed."
+   ],
+   "topic": "Database normalization"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "An index is a data structure (usually a B-tree) that speeds up lookups on a column.",
+    "Indexes make reads fast but writes slower, since the index must be maintained.",
+    "An index on the wrong column, or too many indexes, wastes space and time.",
+    "Composite indexes help multi-column filters when the leftmost columns are used."
+   ],
+   "topic": "Database indexing"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "Caching stores expensive results so repeat requests skip the work.",
+    "Cache invalidation, knowing when data is stale, is the hard part.",
+    "Common strategies: TTL expiry, write-through, and cache-aside.",
+    "LRU eviction drops the least recently used entries when full."
+   ],
+   "topic": "Caching"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "A load balancer spreads traffic across multiple servers.",
+    "Algorithms include round-robin, least connections, and IP hash.",
+    "Health checks remove failed backends from rotation.",
+    "Layer 7 balancers route on HTTP content; layer 4 balancers route on TCP/UDP."
+   ],
+   "topic": "Load balancing"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "Message queues let services communicate asynchronously: producers send, consumers process later.",
+    "They decouple services in time; a slow consumer does not block the producer.",
+    "Delivery is often at-least-once, so consumers must be idempotent.",
+    "Retention, ordering, and dead-letter queues are the key configuration concerns."
+   ],
+   "topic": "Message queues"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "Microservices are independently deployable services, each owning its data.",
+    "They communicate over the network, usually with APIs or events.",
+    "Benefits: independent scaling and team autonomy.",
+    "Costs: operational complexity, distributed debugging, and network failure modes."
+   ],
+   "topic": "Microservices"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "A monolith is a single deployable unit containing the whole application.",
+    "It is simpler to develop, test, and debug when the team is small.",
+    "It can become hard to scale organizationally as teams grow.",
+    "A modular monolith keeps clean internal boundaries without distributed-system costs."
+   ],
+   "topic": "Monoliths"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "In event-driven systems, components react to events instead of calling each other directly.",
+    "Producers do not know who consumes; coupling is loose.",
+    "An event log can serve as the source of truth and enable replay.",
+    "Tracing a request across many handlers is harder than in request/response code."
+   ],
+   "topic": "Event-driven architecture"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "Rate limiting caps how many requests a client can make in a window.",
+    "Token bucket allows bursts; fixed window is simpler but has edge effects.",
+    "Exceeding the limit returns HTTP 429.",
+    "It protects backends from abuse and accidental overload."
+   ],
+   "topic": "API rate limiting"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "WebSockets give full-duplex messaging over a single long-lived connection.",
+    "The connection starts as HTTP and upgrades.",
+    "They suit chat, live dashboards, and games.",
+    "The server must track open connections, which changes how you scale."
+   ],
+   "topic": "WebSockets"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "gRPC is a remote procedure call framework using Protocol Buffers for serialization.",
+    "It runs over HTTP/2 with multiplexing and binary framing.",
+    "Contracts are strongly typed and shared via .proto files.",
+    "It fits service-to-service calls better than browser clients."
+   ],
+   "topic": "gRPC"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "GraphQL lets clients request exactly the fields they need through one endpoint.",
+    "The server publishes a typed schema describing what can be queried.",
+    "It reduces over-fetching compared to fixed REST responses.",
+    "Naive resolvers cause N+1 queries; batching with dataloaders fixes it."
+   ],
+   "topic": "GraphQL"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "Each process has isolated memory and its own file descriptors.",
+    "fork() creates a child as a copy of the parent.",
+    "Signals like SIGTERM and SIGKILL control processes from outside.",
+    "PID 1 (init) adopts orphaned processes."
+   ],
+   "topic": "Linux processes"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "Threads share a process's memory; processes do not share memory by default.",
+    "Threads are cheaper to create and switch between.",
+    "Shared memory means threads need synchronization to avoid race conditions.",
+    "Python's GIL stops multiple threads from running bytecode at once, limiting CPU-bound threading."
+   ],
+   "topic": "Threads vs processes"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "A deadlock is threads waiting on each other in a cycle, so nothing progresses.",
+    "Four conditions are needed: mutual exclusion, hold-and-wait, no preemption, circular wait.",
+    "Breaking any one condition prevents deadlocks.",
+    "Acquiring locks in a consistent global order is the standard practical fix."
+   ],
+   "topic": "Deadlocks"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "A race condition is when the outcome depends on the timing of concurrent operations.",
+    "Shared mutable state is the usual cause.",
+    "Locks, atomic operations, or message passing remove them.",
+    "They are notoriously hard to reproduce because timing varies run to run."
+   ],
+   "topic": "Race conditions"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "Garbage collection reclaims memory the program can no longer reach.",
+    "Reference counting frees objects immediately but cannot handle cycles.",
+    "Tracing collectors periodically find all unreachable objects.",
+    "The cost is pause times and some CPU overhead."
+   ],
+   "topic": "Garbage collection"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "A compiler translates the whole program to machine code before it runs.",
+    "An interpreter executes the program step by step.",
+    "JIT compilers do both: interpret first, compile hot paths at runtime.",
+    "Compiled code usually runs faster; interpreted code is easier to iterate on."
+   ],
+   "topic": "Compilers vs interpreters"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "Virtual memory gives each process its own private address space.",
+    "Pages map virtual addresses to physical RAM; the MMU does the translation.",
+    "When RAM fills, pages swap to disk, which is much slower.",
+    "A page fault happens on first access to a page, triggering the mapping."
+   ],
+   "topic": "Virtual memory"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "A file system organizes bytes on disk into files and directories.",
+    "Inodes store metadata like ownership, permissions, and block locations.",
+    "Journaling records intended changes first, so crashes recover cleanly.",
+    "Common examples are ext4 on Linux, NTFS on Windows, and APFS on macOS."
+   ],
+   "topic": "File systems"
+  },
+  {
+   "category": "cs",
+   "facts": [
+    "RAID combines disks for speed, redundancy, or both.",
+    "RAID 0 stripes data for speed with no redundancy; one disk loss kills the array.",
+    "RAID 1 mirrors data across disks.",
+    "RAID 5 stripes with parity so one disk can fail safely; RAID is not a backup."
+   ],
+   "topic": "RAID"
+  },
+  {
+   "category": "databases",
+   "facts": [
+    "PostgreSQL is an open-source relational database with a strong reputation for correctness.",
+    "It is ACID compliant and supports advanced types including JSONB.",
+    "Extensions like PostGIS add whole new capabilities.",
+    "MVCC lets readers and writers proceed without blocking each other."
+   ],
+   "topic": "PostgreSQL"
+  },
+  {
+   "category": "databases",
+   "facts": [
+    "MySQL is an open-source relational database widely used for web applications.",
+    "InnoDB is the default storage engine and supports transactions.",
+    "It has built-in replication for read scaling and failover.",
+    "MariaDB is a community fork created after Oracle acquired MySQL."
+   ],
+   "topic": "MySQL"
+  },
+  {
+   "category": "databases",
+   "facts": [
+    "SQLite is an embedded database: the whole database is a single file.",
+    "It needs no server process and zero configuration.",
+    "It fits mobile apps, tests, and small tools.",
+    "It is not built for high-concurrency writes from many processes."
+   ],
+   "topic": "SQLite"
+  },
+  {
+   "category": "databases",
+   "facts": [
+    "MongoDB stores data as BSON documents in collections, with a flexible schema.",
+    "It scales horizontally by sharding across machines.",
+    "Multi-document ACID transactions were added in version 4.0.",
+    "It trades some relational guarantees for developer speed and scale-out."
+   ],
+   "topic": "MongoDB"
+  },
+  {
+   "category": "databases",
+   "facts": [
+    "Redis is an in-memory data store, commonly used for caching, sessions, and queues.",
+    "It offers rich data structures: strings, hashes, lists, sets, sorted sets.",
+    "Persistence options are RDB snapshots and the append-only file (AOF).",
+    "Because data lives in RAM, dataset size is limited by memory."
+   ],
+   "topic": "Redis"
+  },
+  {
+   "category": "databases",
+   "facts": [
+    "Elasticsearch is a distributed search and analytics engine built on Lucene.",
+    "It indexes text into an inverted index for fast full-text search.",
+    "It is near real-time: documents become searchable about a second after indexing.",
+    "It suits log analytics and product search more than primary transactional storage."
+   ],
+   "topic": "Elasticsearch"
+  },
+  {
+   "category": "databases",
+   "facts": [
+    "Cassandra is a wide-column store designed for high write throughput across many nodes.",
+    "It is peer-to-peer with no single point of failure.",
+    "Consistency is tunable per query, trading freshness for availability.",
+    "Its query language CQL resembles SQL but with different guarantees."
+   ],
+   "topic": "Cassandra"
+  },
+  {
+   "category": "databases",
+   "facts": [
+    "Sharding splits a dataset across machines by a shard key.",
+    "It scales writes beyond what one machine can handle.",
+    "Cross-shard queries and transactions are expensive or impossible.",
+    "Choosing the shard key is the critical decision; hot keys create hot shards."
+   ],
+   "topic": "Sharding"
+  },
+  {
+   "category": "databases",
+   "facts": [
+    "Replication copies data to multiple nodes for read scaling and failover.",
+    "In primary-replica setups, writes go to the primary and reads can fan out.",
+    "Replica lag means reads may see slightly stale data.",
+    "Multi-primary replication allows writes anywhere but complicates conflicts."
+   ],
+   "topic": "Replication"
+  },
+  {
+   "category": "databases",
+   "facts": [
+    "A transaction groups operations so they all succeed or all fail.",
+    "Isolation levels control how much concurrent transactions can see of each other.",
+    "Locks and contention can cause deadlocks under heavy concurrency.",
+    "Keep transactions short to reduce lock holding time."
+   ],
+   "topic": "Transactions"
+  },
+  {
+   "category": "databases",
+   "facts": [
+    "Isolation levels from weakest to strongest: read uncommitted, read committed, repeatable read, serializable.",
+    "Weaker levels allow anomalies like dirty reads and phantom reads.",
+    "Stronger levels cost concurrency.",
+    "Read committed is the default in PostgreSQL; repeatable read in MySQL InnoDB."
+   ],
+   "topic": "Isolation levels"
+  },
+  {
+   "category": "databases",
+   "facts": [
+    "MVCC keeps multiple versions of rows so readers see a consistent snapshot.",
+    "Writers create new versions instead of blocking readers.",
+    "Old versions are cleaned up by vacuuming.",
+    "PostgreSQL and InnoDB both use MVCC."
+   ],
+   "topic": "MVCC"
+  },
+  {
+   "category": "databases",
+   "facts": [
+    "The write-ahead log records changes before they are applied to data files.",
+    "After a crash, the database replays the log to recover.",
+    "The same log stream feeds replication to standby servers.",
+    "PostgreSQL and SQLite both rely on a WAL."
+   ],
+   "topic": "Write-ahead log"
+  },
+  {
+   "category": "databases",
+   "facts": [
+    "Columnar storage lays data out column by column instead of row by row.",
+    "Analytics queries that scan few columns over many rows run much faster.",
+    "Compression works better because values in a column are similar.",
+    "Parquet is the standard file format; ClickHouse is a popular engine."
+   ],
+   "topic": "Columnar storage"
+  },
+  {
+   "category": "databases",
+   "facts": [
+    "Row stores keep whole records together, which suits transactional point lookups.",
+    "Column stores keep each column together, which suits analytical scans.",
+    "OLTP workloads favor row stores; OLAP favors column stores.",
+    "Pick the layout by query pattern, not by fashion."
+   ],
+   "topic": "Row vs column stores"
+  },
+  {
+   "category": "databases",
+   "facts": [
+    "Time-series databases are built for timestamped measurements.",
+    "Retention policies and automatic downsampling are built in.",
+    "They compress regular numeric series very well.",
+    "InfluxDB and TimescaleDB are common choices."
+   ],
+   "topic": "Time-series databases"
+  },
+  {
+   "category": "databases",
+   "facts": [
+    "Vector databases store embeddings and run approximate nearest neighbor search.",
+    "They power retrieval-augmented generation over document collections.",
+    "Exact search does not scale; ANN trades a little recall for a lot of speed.",
+    "pgvector, Qdrant, and Pinecone are common options."
+   ],
+   "topic": "Vector databases"
+  },
+  {
+   "category": "databases",
+   "facts": [
+    "Full-text search tokenizes documents into an inverted index mapping terms to documents.",
+    "Ranking uses signals like term frequency and inverse document frequency; BM25 is the standard modern formula.",
+    "Stemming and stop-word handling shape result quality.",
+    "It answers keyword and phrase queries, not semantic understanding."
+   ],
+   "topic": "Full-text search"
+  },
+  {
+   "category": "databases",
+   "facts": [
+    "Connection pooling reuses open database connections across requests.",
+    "Opening a fresh connection per request wastes time on handshakes.",
+    "Pool size must match what the database can actually handle.",
+    "PgBouncer is a widely used external pooler for PostgreSQL."
+   ],
+   "topic": "Connection pooling"
+  },
+  {
+   "category": "databases",
+   "facts": [
+    "Migrations are versioned scripts that move the schema from one state to the next.",
+    "Each migration should be reversible or at least carefully forward-only.",
+    "Never edit a migration that has already run in production.",
+    "Test migrations on a copy of production data, not just an empty schema."
+   ],
+   "topic": "Database migrations"
+  },
+  {
+   "category": "networking",
+   "facts": [
+    "The OSI model has seven layers: physical, data link, network, transport, session, presentation, application.",
+    "It is a teaching model; the real internet runs on the four-layer TCP/IP model.",
+    "Each layer provides services to the one above it.",
+    "When debugging, walking the layers top-down or bottom-up is a reliable method."
+   ],
+   "topic": "OSI model"
+  },
+  {
+   "category": "networking",
+   "facts": [
+    "The TCP/IP model has four layers: link, internet, transport, application.",
+    "IP handles addressing and routing; TCP adds reliability on top.",
+    "It won because it was simple and running code beat paper standards.",
+    "Everything on the internet speaks it."
+   ],
+   "topic": "TCP/IP model"
+  },
+  {
+   "category": "networking",
+   "facts": [
+    "IPv4 addresses are 32 bits, about 4.3 billion total, and effectively exhausted.",
+    "IPv6 addresses are 128 bits, effectively unlimited.",
+    "Private ranges never route on the public internet: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16.",
+    "Dual-stack hosts run both during the long transition."
+   ],
+   "topic": "IP addressing"
+  },
+  {
+   "category": "networking",
+   "facts": [
+    "Subnetting divides a network into smaller networks for organization and security.",
+    "CIDR notation like 192.168.1.0/24 states how many bits are the network prefix.",
+    "A /24 holds 256 addresses; a /16 holds 65,536.",
+    "Smaller subnets limit broadcast domains and blast radius."
+   ],
+   "topic": "Subnetting"
+  },
+  {
+   "category": "networking",
+   "facts": [
+    "NAT translates private addresses to a public one, letting many devices share it.",
+    "It is why home networks work behind one ISP address.",
+    "It breaks true end-to-end connectivity; inbound connections need port forwarding.",
+    "IPv6's huge space reduces the need for NAT."
+   ],
+   "topic": "NAT"
+  },
+  {
+   "category": "networking",
+   "facts": [
+    "A firewall filters packets against a rule set.",
+    "Stateful firewalls track connections and allow return traffic automatically.",
+    "Default-deny (block everything, allow listed) is safer than default-allow.",
+    "Host firewalls protect one machine; network firewalls protect a perimeter."
+   ],
+   "topic": "Firewalls"
+  },
+  {
+   "category": "networking",
+   "facts": [
+    "A VPN builds an encrypted tunnel across a public network.",
+    "It hides your traffic from the local network and ISP.",
+    "It does not make you anonymous; the VPN provider still sees everything.",
+    "WireGuard is modern and simple; OpenVPN is older and widely supported."
+   ],
+   "topic": "VPN"
+  },
+  {
+   "category": "networking",
+   "facts": [
+    "A CDN caches content on servers near users, cutting latency and origin load.",
+    "It shines for static assets: images, video, libraries.",
+    "Dynamic content can be cached briefly or passed through.",
+    "Major providers operate thousands of edge locations."
+   ],
+   "topic": "CDN"
+  },
+  {
+   "category": "networking",
+   "facts": [
+    "BGP is the protocol routers use to exchange routes between autonomous systems.",
+    "It is what makes the internet one network instead of islands.",
+    "Route leaks and hijacks from misconfiguration have caused major outages.",
+    "It is policy-based, not purely shortest-path."
+   ],
+   "topic": "BGP"
+  },
+  {
+   "category": "networking",
+   "facts": [
+    "Latency is delay; bandwidth is capacity per second.",
+    "More bandwidth does not reduce latency.",
+    "The speed of light sets a hard floor: about 67 ms round trip across the planet at best.",
+    "For interactive apps, latency usually matters more than bandwidth."
+   ],
+   "topic": "Latency vs bandwidth"
+  },
+  {
+   "category": "networking",
+   "facts": [
+    "Packet switching chops data into packets that travel independently and reassemble at the destination.",
+    "It shares links efficiently among many users.",
+    "Circuit switching reserves a dedicated path, like old telephone calls.",
+    "The internet is packet-switched."
+   ],
+   "topic": "Packet switching"
+  },
+  {
+   "category": "networking",
+   "facts": [
+    "HTTP/2 multiplexes many requests over a single TCP connection.",
+    "Header compression (HPACK) cuts overhead on repeated headers.",
+    "It uses binary framing instead of plain text.",
+    "It fixed head-of-line blocking at the HTTP layer, though TCP-level blocking remains."
+   ],
+   "topic": "HTTP/2"
+  },
+  {
+   "category": "networking",
+   "facts": [
+    "HTTP/3 runs over QUIC, which is built on UDP instead of TCP.",
+    "Handshakes are faster, often zero round trips on repeat visits.",
+    "It handles packet loss better on shaky networks.",
+    "Connections can migrate across networks, e.g. Wi-Fi to cellular, without dropping."
+   ],
+   "topic": "HTTP/3 and QUIC"
+  },
+  {
+   "category": "networking",
+   "facts": [
+    "Cookies are small key-value pairs a site stores in the browser and gets back with each request.",
+    "They carry sessions, preferences, and tracking identifiers.",
+    "HttpOnly cookies are invisible to JavaScript, which blocks theft via XSS.",
+    "SameSite controls when browsers send them cross-site."
+   ],
+   "topic": "Cookies"
+  },
+  {
+   "category": "networking",
+   "facts": [
+    "CORS is the browser mechanism that blocks web pages from reading cross-origin responses by default.",
+    "Servers opt in with Access-Control-Allow-Origin headers.",
+    "Non-simple requests trigger a preflight OPTIONS check first.",
+    "It is enforced by browsers, not by servers; curl ignores it."
+   ],
+   "topic": "CORS"
+  },
+  {
+   "category": "security",
+   "facts": [
+    "Hashing is one-way: you cannot get the input back from the digest.",
+    "Encryption is two-way: the key decrypts what it encrypted.",
+    "Store passwords hashed, never encrypted or plain.",
+    "Use hashes for integrity checks, encryption for confidentiality."
+   ],
+   "topic": "Hashing vs encryption"
+  },
+  {
+   "category": "security",
+   "facts": [
+    "A salt is random data mixed into each password before hashing.",
+    "Salts defeat rainbow table attacks because each hash is unique.",
+    "Use a memory-hard function: bcrypt, scrypt, or Argon2.",
+    "Plain MD5 or SHA-256 of passwords is effectively broken."
+   ],
+   "topic": "Password salting"
+  },
+  {
+   "category": "security",
+   "facts": [
+    "XSS injects attacker JavaScript into pages other users view.",
+    "Stored XSS persists in the database; reflected XSS rides a crafted link; DOM XSS happens client-side.",
+    "Escape output by context and set a Content Security Policy.",
+    "HttpOnly cookies keep session tokens out of stolen script reach."
+   ],
+   "topic": "XSS"
+  },
+  {
+   "category": "security",
+   "facts": [
+    "SQL injection happens when user input is concatenated into SQL strings.",
+    "Parameterized queries (prepared statements) separate code from data and stop it.",
+    "ORMs help but raw query strings inside them are still dangerous.",
+    "Run the app database user with least privilege to limit blast radius."
+   ],
+   "topic": "SQL injection"
+  },
+  {
+   "category": "security",
+   "facts": [
+    "CSRF tricks a logged-in browser into submitting a forged request to a site.",
+    "The browser helpfully attaches the victim's cookies.",
+    "SameSite cookies and per-request anti-CSRF tokens stop it.",
+    "GET requests should never change state."
+   ],
+   "topic": "CSRF"
+  },
+  {
+   "category": "security",
+   "facts": [
+    "MFA requires two or more factors: knowledge, possession, or inherence.",
+    "TOTP apps and hardware security keys are strong second factors.",
+    "SMS codes are better than nothing but vulnerable to SIM swapping.",
+    "Enforce MFA for admin and email accounts first."
+   ],
+   "topic": "Multi-factor authentication"
+  },
+  {
+   "category": "security",
+   "facts": [
+    "Zero trust means no implicit trust based on network location.",
+    "Every request is authenticated and authorized, inside or outside the perimeter.",
+    "It uses identity-aware proxies and short-lived credentials.",
+    "Micro-segmentation limits lateral movement after a breach."
+   ],
+   "topic": "Zero trust"
+  },
+  {
+   "category": "security",
+   "facts": [
+    "Least privilege grants each user and service only the permissions it needs.",
+    "It shrinks the blast radius when credentials leak.",
+    "Review and prune access regularly; privileges accumulate over time.",
+    "Default-deny policies implement it cleanly."
+   ],
+   "topic": "Least privilege"
+  },
+  {
+   "category": "security",
+   "facts": [
+    "Public-key cryptography uses a key pair: the public key encrypts, the private key decrypts.",
+    "It also enables digital signatures: private key signs, public key verifies.",
+    "RSA and elliptic-curve are the common families.",
+    "Key length matters; short keys fall to modern hardware."
+   ],
+   "topic": "Public key cryptography"
+  },
+  {
+   "category": "security",
+   "facts": [
+    "A certificate binds a public key to an identity like a domain name.",
+    "Certificate authorities sign certificates after validating control.",
+    "Browsers ship a trust store of root CAs.",
+    "Let's Encrypt made domain-validated certificates free and automated."
+   ],
+   "topic": "Certificates"
+  },
+  {
+   "category": "security",
+   "facts": [
+    "Security headers are cheap HTTP headers that harden browsers.",
+    "HSTS tells browsers to use HTTPS only.",
+    "Content Security Policy restricts where scripts and resources may load from.",
+    "X-Frame-Options or frame-ancestors block clickjacking."
+   ],
+   "topic": "Security headers"
+  },
+  {
+   "category": "security",
+   "facts": [
+    "Validate all input on the server; client-side checks are cosmetic.",
+    "Prefer allowlists of known-good patterns over denylists.",
+    "Check type, length, range, and format, not just presence.",
+    "Validation failures should reject loudly, not silently clean."
+   ],
+   "topic": "Input validation"
+  },
+  {
+   "category": "security",
+   "facts": [
+    "SSRF is when an attacker makes your server issue requests to internal URLs.",
+    "Cloud metadata endpoints are the classic target.",
+    "Block private IP ranges and validate redirect targets.",
+    "Fetch only from allowlisted hosts where possible."
+   ],
+   "topic": "SSRF"
+  },
+  {
+   "category": "security",
+   "facts": [
+    "Vulnerabilities hide in dependencies, not just your own code.",
+    "Lockfiles pin exact versions so builds are reproducible.",
+    "Software composition analysis tools scan for known CVEs.",
+    "Update promptly, but test: updates can break builds."
+   ],
+   "topic": "Dependency vulnerabilities"
+  },
+  {
+   "category": "security",
+   "facts": [
+    "Secrets in code or chat logs leak; assume anything committed is public.",
+    "Use a managed secret store or vault with access logging.",
+    "Rotate secrets on a schedule and after any incident.",
+    "Scan repositories for accidentally committed keys."
+   ],
+   "topic": "Secrets management"
+  },
+  {
+   "category": "ml",
+   "facts": [
+    "Linear regression fits a line (or hyperplane) minimizing squared error.",
+    "It has a closed-form solution via the normal equations.",
+    "It assumes a roughly linear relationship between features and target.",
+    "Outliers pull the line strongly because errors are squared."
+   ],
+   "topic": "Linear regression"
+  },
+  {
+   "category": "ml",
+   "facts": [
+    "Logistic regression is a classifier despite its name.",
+    "It squeezes a linear score through the sigmoid into a probability.",
+    "The decision boundary is linear in feature space.",
+    "It is a strong, fast baseline for binary classification."
+   ],
+   "topic": "Logistic regression"
+  },
+  {
+   "category": "ml",
+   "facts": [
+    "Decision trees split data recursively on the feature that best separates classes.",
+    "They are easy to read: each path is a readable rule.",
+    "They overfit eagerly; depth limits and pruning control it.",
+    "Single trees are weak; ensembles of them are strong."
+   ],
+   "topic": "Decision trees"
+  },
+  {
+   "category": "ml",
+   "facts": [
+    "A random forest trains many trees on bootstrapped samples and averages their votes.",
+    "Bagging reduces the overfitting of individual trees.",
+    "It handles mixed feature types with little preprocessing.",
+    "Feature importance scores come out naturally."
+   ],
+   "topic": "Random forests"
+  },
+  {
+   "category": "ml",
+   "facts": [
+    "Gradient boosting builds trees sequentially, each fixing the previous errors.",
+    "XGBoost and LightGBM dominate tabular data competitions.",
+    "It is powerful but sensitive to hyperparameters and noise.",
+    "Learning rate and tree depth are the knobs that matter most."
+   ],
+   "topic": "Gradient boosting"
+  },
+  {
+   "category": "ml",
+   "facts": [
+    "Neural networks stack layers of neurons with nonlinear activations.",
+    "With enough width they can approximate any continuous function.",
+    "They need large datasets and careful tuning to beat simpler models.",
+    "Depth lets them learn hierarchical features."
+   ],
+   "topic": "Neural networks"
+  },
+  {
+   "category": "ml",
+   "facts": [
+    "Backpropagation applies the chain rule layer by layer to compute gradients.",
+    "It made training deep networks computationally feasible.",
+    "Gradients flow backward from the loss to every parameter.",
+    "Vanishing and exploding gradients were the historic obstacles."
+   ],
+   "topic": "Backpropagation"
+  },
+  {
+   "category": "ml",
+   "facts": [
+    "Gradient descent steps parameters opposite the gradient of the loss.",
+    "Too large a learning rate diverges; too small crawls.",
+    "Stochastic variants use mini-batches for speed and noise.",
+    "Adam adapts per-parameter step sizes and is the common default."
+   ],
+   "topic": "Gradient descent"
+  },
+  {
+   "category": "ml",
+   "facts": [
+    "Overfitting is when a model memorizes training data instead of learning patterns.",
+    "Symptom: great training score, poor test score.",
+    "Cures: more data, regularization, simpler models, early stopping.",
+    "Model capacity should match data size and noise."
+   ],
+   "topic": "Overfitting"
+  },
+  {
+   "category": "ml",
+   "facts": [
+    "Underfitting is when a model is too simple to capture the pattern.",
+    "Symptom: poor scores on both training and test data.",
+    "It is high bias; the fix is more capacity or better features.",
+    "A linear model on curved data is the classic case."
+   ],
+   "topic": "Underfitting"
+  },
+  {
+   "category": "ml",
+   "facts": [
+    "Cross-validation splits data into k folds and rotates which fold validates.",
+    "It estimates how the model generalizes better than a single split.",
+    "k=5 or k=10 are the common choices.",
+    "It costs k training runs, so it is expensive for big models."
+   ],
+   "topic": "Cross-validation"
+  },
+  {
+   "category": "ml",
+   "facts": [
+    "Regularization penalizes model complexity to fight overfitting.",
+    "L1 (lasso) drives weights to zero, selecting features; L2 (ridge) shrinks them smoothly.",
+    "Dropout randomly silences neurons during training.",
+    "Early stopping halts when validation stops improving."
+   ],
+   "topic": "Regularization"
+  },
+  {
+   "category": "ml",
+   "facts": [
+    "CNNs learn local patterns with sliding filters, sharing weights across positions.",
+    "Pooling downsamples while keeping the strongest signals.",
+    "They are translation invariant: a cat is a cat anywhere in the image.",
+    "They dominated computer vision before transformers arrived there too."
+   ],
+   "topic": "Convolutional neural networks"
+  },
+  {
+   "category": "ml",
+   "facts": [
+    "RNNs process sequences step by step, carrying a hidden state forward.",
+    "The hidden state is the network's memory of what came before.",
+    "Vanishing gradients made long-range memory hard.",
+    "LSTMs and GRUs added gates to preserve information longer."
+   ],
+   "topic": "Recurrent neural networks"
+  },
+  {
+   "category": "ml",
+   "facts": [
+    "Transformers replaced recurrence with attention and process sequences in parallel.",
+    "That parallelism is what allowed scaling to large language models.",
+    "They come in encoder, decoder, and encoder-decoder flavors.",
+    "Positional encodings tell them about token order."
+   ],
+   "topic": "Transformers"
+  },
+  {
+   "category": "ml",
+   "facts": [
+    "Attention lets a model weigh which inputs matter for each output.",
+    "Queries, keys, and values are the three roles in the computation.",
+    "Scaled dot-product attention is the standard formulation.",
+    "Its cost grows quadratically with sequence length."
+   ],
+   "topic": "Attention mechanism"
+  },
+  {
+   "category": "ml",
+   "facts": [
+    "Embeddings are dense vectors where similar items sit close together.",
+    "They are learned from data, not hand-designed.",
+    "Word, image, and user embeddings all work the same way.",
+    "Cosine similarity is the usual way to compare them."
+   ],
+   "topic": "Embeddings"
+  },
+  {
+   "category": "ml",
+   "facts": [
+    "Tokenization chops text into the units a model actually processes.",
+    "Byte-pair encoding merges frequent character pairs into tokens.",
+    "Larger vocabularies mean fewer tokens per sentence but bigger embedding tables.",
+    "The same text tokenizes differently across models."
+   ],
+   "topic": "Tokenization"
+  },
+  {
+   "category": "ml",
+   "facts": [
+    "Fine-tuning adapts a pretrained model to a specific task or style.",
+    "It needs far less data than pretraining from scratch.",
+    "LoRA trains small low-rank adapters instead of all weights, cheaply.",
+    "Supervised fine-tuning on instructions is what makes assistants follow directions."
+   ],
+   "topic": "Fine-tuning"
+  },
+  {
+   "category": "ml",
+   "facts": [
+    "Transfer learning reuses a model trained on one task as the start for another.",
+    "Pretrained backbones plus a small task head is the standard recipe.",
+    "It works when the source and target domains share structure.",
+    "It is why small teams can build on large models."
+   ],
+   "topic": "Transfer learning"
+  },
+  {
+   "category": "ml",
+   "facts": [
+    "Clustering groups unlabeled points by similarity.",
+    "K-means needs k chosen upfront and assumes roughly spherical clusters.",
+    "It is sensitive to initialization and feature scaling.",
+    "Evaluate with silhouette scores or, better, whether the groups are useful."
+   ],
+   "topic": "Clustering"
+  },
+  {
+   "category": "ml",
+   "facts": [
+    "K-means alternates between assigning points to the nearest centroid and moving centroids to the mean.",
+    "It always converges, but to a local optimum that depends on the start.",
+    "K-means++ initialization picks spread-out starting centroids.",
+    "Empty clusters can appear and need handling."
+   ],
+   "topic": "K-means"
+  },
+  {
+   "category": "ml",
+   "facts": [
+    "PCA finds the directions of maximum variance in data.",
+    "Projecting onto the top components compresses with minimal squared error.",
+    "It is linear; it cannot capture curved structure.",
+    "The components are hard to interpret as original features."
+   ],
+   "topic": "PCA"
+  },
+  {
+   "category": "ml",
+   "facts": [
+    "Reinforcement learning trains agents from reward signals, not labeled examples.",
+    "The core tension is exploration versus exploitation.",
+    "It needs many trial-and-error interactions, real or simulated.",
+    "Q-learning and policy gradients are the two classic families."
+   ],
+   "topic": "Reinforcement learning"
+  },
+  {
+   "category": "ml",
+   "facts": [
+    "Precision is true positives over all predicted positives.",
+    "Recall is true positives over all actual positives.",
+    "Raising the decision threshold trades recall for precision.",
+    "F1 is their harmonic mean, punishing extreme imbalance."
+   ],
+   "topic": "Precision and recall"
+  },
+  {
+   "category": "math",
+   "facts": [
+    "The mean is the sum divided by the count; the median is the middle value when sorted.",
+    "Outliers drag the mean but barely move the median.",
+    "For skewed data like incomes, report both.",
+    "The mode is the most frequent value."
+   ],
+   "topic": "Mean vs median"
+  },
+  {
+   "category": "math",
+   "facts": [
+    "Standard deviation measures typical distance from the mean.",
+    "Variance is its square.",
+    "For roughly normal data, 68% falls within one standard deviation, 95% within two.",
+    "It is in the same units as the data, unlike variance."
+   ],
+   "topic": "Standard deviation"
+  },
+  {
+   "category": "math",
+   "facts": [
+    "Probabilities run from 0 (impossible) to 1 (certain).",
+    "Independent events multiply: P(A and B) = P(A) times P(B).",
+    "Mutually exclusive events add.",
+    "Conditional probability updates the odds given new information."
+   ],
+   "topic": "Probability basics"
+  },
+  {
+   "category": "math",
+   "facts": [
+    "Bayes theorem flips conditional probabilities: P(H|E) from P(E|H), the prior, and the evidence.",
+    "It formalizes updating beliefs with data.",
+    "Base rates dominate when evidence is weak; ignoring them is the base-rate fallacy.",
+    "Spam filters and medical testing both run on it."
+   ],
+   "topic": "Bayes theorem"
+  },
+  {
+   "category": "math",
+   "facts": [
+    "The normal distribution is the bell curve, set by its mean and standard deviation.",
+    "Many natural measurements approximate it.",
+    "The central limit theorem says averages of samples tend toward normal.",
+    "Z-scores measure distance from the mean in standard deviations."
+   ],
+   "topic": "Normal distribution"
+  },
+  {
+   "category": "math",
+   "facts": [
+    "Correlation measures how two variables move together, from -1 to 1.",
+    "It does not imply causation.",
+    "Confounding variables can manufacture fake correlations.",
+    "Causation needs a mechanism, a randomized experiment, or strong quasi-experimental design."
+   ],
+   "topic": "Correlation vs causation"
+  },
+  {
+   "category": "math",
+   "facts": [
+    "A p-value is the probability of seeing data this extreme if the null hypothesis were true.",
+    "It is not the probability that the hypothesis is true.",
+    "The 0.05 threshold is convention, not a law of nature.",
+    "P-hacking, testing many hypotheses until one passes, invalidates it."
+   ],
+   "topic": "P-values"
+  },
+  {
+   "category": "math",
+   "facts": [
+    "Random sampling is what lets results generalize to a population.",
+    "Biased samples mislead no matter how large.",
+    "Bigger samples shrink random noise but do not fix bias.",
+    "Stratified sampling ensures subgroups are represented."
+   ],
+   "topic": "Sampling"
+  },
+  {
+   "category": "math",
+   "facts": [
+    "A vector has magnitude and direction.",
+    "The dot product measures how aligned two vectors are.",
+    "Embeddings in machine learning are vectors compared this way.",
+    "Normalization to unit length makes cosine similarity clean."
+   ],
+   "topic": "Vectors"
+  },
+  {
+   "category": "math",
+   "facts": [
+    "Matrices are rectangular arrays that represent linear transformations.",
+    "Matrix multiplication composes transformations; order matters.",
+    "Only square matrices with nonzero determinant have inverses.",
+    "Eigenvectors are directions a matrix only stretches."
+   ],
+   "topic": "Matrices"
+  },
+  {
+   "category": "math",
+   "facts": [
+    "A derivative is the instantaneous rate of change.",
+    "Gradient descent follows the negative gradient downhill.",
+    "The chain rule differentiates compositions of functions.",
+    "Second derivatives describe curvature."
+   ],
+   "topic": "Derivatives"
+  },
+  {
+   "category": "math",
+   "facts": [
+    "An integral accumulates a quantity, geometrically the area under a curve.",
+    "It is the reverse operation of differentiation.",
+    "Definite integrals give numbers; indefinite integrals give functions.",
+    "Probabilities and expected values are integrals."
+   ],
+   "topic": "Integrals"
+  },
+  {
+   "category": "math",
+   "facts": [
+    "Logarithms are the inverse of exponentiation: log answers 'to what power?'.",
+    "Log scales compress huge ranges into readable ones.",
+    "The natural log, base e, appears in growth, decay, and information theory.",
+    "Log rules turn multiplication into addition."
+   ],
+   "topic": "Logarithms"
+  },
+  {
+   "category": "math",
+   "facts": [
+    "A prime is divisible only by 1 and itself.",
+    "There are infinitely many primes; Euclid proved it.",
+    "Primality testing gets expensive for very large numbers.",
+    "RSA encryption rests on how hard large primes are to factor."
+   ],
+   "topic": "Prime numbers"
+  },
+  {
+   "category": "math",
+   "facts": [
+    "Each Fibonacci number is the sum of the previous two: 1, 1, 2, 3, 5, 8.",
+    "Naive recursion recomputes everything and runs in exponential time.",
+    "Memoization or iteration makes it linear.",
+    "The ratio of consecutive terms approaches the golden ratio."
+   ],
+   "topic": "Fibonacci numbers"
+  },
+  {
+   "category": "tech",
+   "facts": [
+    "MIT and Apache-2.0 are permissive: use the code, even commercially, with attribution.",
+    "GPL is copyleft: distributing derivatives requires sharing source under GPL too.",
+    "Apache-2.0 adds an explicit patent grant.",
+    "Always check the license before vendoring code into a product."
+   ],
+   "topic": "Open source licenses"
+  },
+  {
+   "category": "tech",
+   "facts": [
+    "Semantic versioning is MAJOR.MINOR.PATCH.",
+    "Major bumps mean breaking changes.",
+    "Minor bumps add features without breaking.",
+    "Patch bumps are bug fixes only."
+   ],
+   "topic": "Semantic versioning"
+  },
+  {
+   "category": "tech",
+   "facts": [
+    "JSON maps directly to objects, arrays, strings, and numbers.",
+    "XML is verbose but has schemas and namespaces.",
+    "JSON won for web APIs because it is terse and easy to parse.",
+    "Both are text formats; neither handles binary well."
+   ],
+   "topic": "JSON vs XML"
+  },
+  {
+   "category": "tech",
+   "facts": [
+    "Unicode assigns every character a code point.",
+    "UTF-8 encodes code points in one to four bytes.",
+    "Plain ASCII text is already valid UTF-8.",
+    "Mojibake happens when bytes are decoded with the wrong encoding."
+   ],
+   "topic": "Unicode and UTF-8"
+  },
+  {
+   "category": "tech",
+   "facts": [
+    "Cron runs commands on a schedule on Unix systems.",
+    "The schedule has five fields: minute, hour, day of month, month, day of week.",
+    "Jobs run as the owning user with a minimal environment.",
+    "Always redirect output to a log or it goes to local mail."
+   ],
+   "topic": "Cron"
+  },
+  {
+   "category": "tech",
+   "facts": [
+    "SSH gives encrypted remote shell access.",
+    "Key-based authentication beats passwords and enables automation.",
+    "It defaults to port 22.",
+    "Tunnels and jump hosts forward ports securely through it."
+   ],
+   "topic": "SSH"
+  },
+  {
+   "category": "tech",
+   "facts": [
+    "Environment variables configure processes without code changes.",
+    "Twelve-factor apps put all config in the environment.",
+    "They are visible to child processes, so never put secrets where logs capture them.",
+    "Use .env files for local development, a secret store in production."
+   ],
+   "topic": "Environment variables"
+  },
+  {
+   "category": "tech",
+   "facts": [
+    "Log levels rank severity: DEBUG, INFO, WARNING, ERROR, CRITICAL.",
+    "Production usually runs at INFO or WARNING.",
+    "Log structured fields, not just strings, so machines can parse them.",
+    "Never log secrets, tokens, or personal data."
+   ],
+   "topic": "Logging levels"
+  },
+  {
+   "category": "tech",
+   "facts": [
+    "Feature flags toggle behavior without redeploying.",
+    "They enable gradual rollouts and quick kill switches.",
+    "Every flag is tech debt; remove it once the rollout finishes.",
+    "Flags need ownership and expiry dates or they accumulate forever."
+   ],
+   "topic": "Feature flags"
+  },
+  {
+   "category": "tech",
+   "facts": [
+    "A/B tests randomly assign users to control or variant.",
+    "Randomization is what makes the comparison valid.",
+    "You need enough sample size to detect the effect you care about.",
+    "Peeking at results early and stopping inflates false positives."
+   ],
+   "topic": "A/B testing"
+  },
+  {
+   "category": "science",
+   "facts": [
+    "Photosynthesis converts light, water, and CO2 into glucose and oxygen.",
+    "Chlorophyll is the pigment that captures light.",
+    "It underpins almost every food chain on Earth.",
+    "The oxygen we breathe is largely its byproduct."
+   ],
+   "topic": "Photosynthesis"
+  },
+  {
+   "category": "science",
+   "facts": [
+    "DNA is a double helix of four nucleotides: A, T, G, C.",
+    "A pairs with T, G pairs with C.",
+    "Genes are DNA stretches that encode proteins.",
+    "Mutations, copying errors, are the raw material of evolution."
+   ],
+   "topic": "DNA"
+  },
+  {
+   "category": "science",
+   "facts": [
+    "Evolution is change in species over generations.",
+    "Natural selection favors variants that reproduce more successfully.",
+    "All life shares common descent.",
+    "Fossils, DNA, and observed adaptation all support it."
+   ],
+   "topic": "Evolution"
+  },
+  {
+   "category": "science",
+   "facts": [
+    "Gravity attracts every mass to every other mass.",
+    "Newton described it as a force; Einstein reframed it as curved spacetime.",
+    "Surface gravity on Earth is about 9.8 meters per second squared.",
+    "It is the weakest of the fundamental forces but dominates at large scales."
+   ],
+   "topic": "Gravity"
+  },
+  {
+   "category": "science",
+   "facts": [
+    "Relativity starts from one postulate: the speed of light is the same for all observers.",
+    "Moving clocks run slow and moving objects contract: time dilation and length contraction.",
+    "E=mc^2 says mass and energy are interchangeable.",
+    "GPS satellites must correct for both special and general relativistic effects."
+   ],
+   "topic": "Relativity"
+  },
+  {
+   "category": "science",
+   "facts": [
+    "Quantum theory says energy comes in discrete packets called quanta.",
+    "Particles exist in superpositions until measured.",
+    "The uncertainty principle limits how precisely paired quantities can both be known.",
+    "Entanglement correlates particles so measuring one constrains the other."
+   ],
+   "topic": "Quantum mechanics"
+  },
+  {
+   "category": "science",
+   "facts": [
+    "The periodic table orders elements by atomic number.",
+    "Elements in a group share chemical behavior.",
+    "Mendeleev predicted undiscovered elements from gaps in his table.",
+    "The table's shape comes from electron shell structure."
+   ],
+   "topic": "Periodic table"
+  },
+  {
+   "category": "science",
+   "facts": [
+    "Ionic bonds transfer electrons, typically between metals and nonmetals.",
+    "Covalent bonds share electron pairs.",
+    "Metallic bonding is a lattice in a sea of mobile electrons.",
+    "Bond type largely determines melting point, conductivity, and hardness."
+   ],
+   "topic": "Chemical bonds"
+  },
+  {
+   "category": "science",
+   "facts": [
+    "The pH scale runs 0 to 14; 7 is neutral.",
+    "Below 7 is acidic, above 7 is basic (alkaline).",
+    "It is logarithmic: each step is ten times the concentration.",
+    "Pure water sits at 7 at room temperature."
+   ],
+   "topic": "pH scale"
+  },
+  {
+   "category": "science",
+   "facts": [
+    "The first law: energy is conserved, only transformed.",
+    "The second law: entropy of an isolated system never decreases.",
+    "The third law: absolute zero cannot be reached.",
+    "Engines are limited by these laws no matter the design."
+   ],
+   "topic": "Laws of thermodynamics"
+  },
+  {
+   "category": "science",
+   "facts": [
+    "Electricity and magnetism are two faces of one force.",
+    "Moving charges create magnetic fields; changing magnetic fields drive currents.",
+    "Maxwell's equations unified them in the 1860s.",
+    "Light itself is an electromagnetic wave."
+   ],
+   "topic": "Electromagnetism"
+  },
+  {
+   "category": "science",
+   "facts": [
+    "Waves carry energy without net movement of matter.",
+    "Wavelength times frequency equals wave speed.",
+    "Interference and diffraction are the signatures of wave behavior.",
+    "Sound, light, and water ripples all obey wave mathematics."
+   ],
+   "topic": "Waves"
+  },
+  {
+   "category": "science",
+   "facts": [
+    "A black hole's gravity is so strong that nothing, not even light, escapes past the event horizon.",
+    "The event horizon is the point of no return, not a physical surface.",
+    "Stellar black holes form when massive stars collapse.",
+    "We detect them by their effects on nearby matter and gravitational waves."
+   ],
+   "topic": "Black holes"
+  },
+  {
+   "category": "science",
+   "facts": [
+    "The solar system has eight planets orbiting the Sun.",
+    "It formed about 4.6 billion years ago from a collapsing cloud of gas and dust.",
+    "The Sun holds about 99.8 percent of the system's mass.",
+    "The planets divide into rocky inner worlds and gas/ice giants outside."
+   ],
+   "topic": "Solar system"
+  },
+  {
+   "category": "science",
+   "facts": [
+    "Earth's lithosphere is broken into plates that move centimeters per year.",
+    "Plate boundaries produce earthquakes, volcanoes, and mountain ranges.",
+    "Seafloor spreading at mid-ocean ridges renews oceanic crust.",
+    "The theory was accepted only in the 1960s."
+   ],
+   "topic": "Plate tectonics"
+  },
+  {
+   "category": "science",
+   "facts": [
+    "The water cycle moves water through evaporation, condensation, and precipitation.",
+    "The Sun drives it; gravity returns water downhill.",
+    "Water is conserved globally, only redistributed.",
+    "Groundwater can take centuries to recharge."
+   ],
+   "topic": "Water cycle"
+  },
+  {
+   "category": "science",
+   "facts": [
+    "Carbon cycles between atmosphere, life, oceans, and rocks.",
+    "Burning fossil fuels releases carbon buried for millions of years, fast.",
+    "The ocean absorbs much of it, which acidifies seawater.",
+    "The cycle is the physical basis of climate change."
+   ],
+   "topic": "Carbon cycle"
+  },
+  {
+   "category": "science",
+   "facts": [
+    "Vaccines train the immune system using weakened, killed, or partial pathogens.",
+    "Herd immunity protects those who cannot be vaccinated.",
+    "They are among the most effective health interventions ever developed.",
+    "Side effects are overwhelmingly mild compared to the diseases prevented."
+   ],
+   "topic": "Vaccines"
+  },
+  {
+   "category": "science",
+   "facts": [
+    "Antibiotics kill bacteria or stop them growing.",
+    "They do nothing against viruses.",
+    "Overuse and misuse breed resistant strains.",
+    "Take them only as prescribed for bacterial infections."
+   ],
+   "topic": "Antibiotics"
+  },
+  {
+   "category": "science",
+   "facts": [
+    "Neurons signal with electrical spikes and chemical synapses.",
+    "The central nervous system is brain plus spinal cord; the rest is peripheral.",
+    "Reflex arcs bypass the brain for speed.",
+    "The human brain holds on the order of 86 billion neurons."
+   ],
+   "topic": "Nervous system"
+  },
+  {
+   "category": "science",
+   "facts": [
+    "Innate immunity is fast and general: barriers, inflammation, phagocytes.",
+    "Adaptive immunity is slow and specific: antibodies and T cells.",
+    "Memory cells make repeat responses faster and stronger.",
+    "Vaccines work by creating that memory without the disease."
+   ],
+   "topic": "Immune system"
+  },
+  {
+   "category": "science",
+   "facts": [
+    "Mitosis divides one cell into two genetically identical daughters.",
+    "Stages run prophase, metaphase, anaphase, telophase.",
+    "It drives growth and tissue repair.",
+    "Errors in division can lead to cell death or cancer."
+   ],
+   "topic": "Mitosis"
+  },
+  {
+   "category": "science",
+   "facts": [
+    "An ecosystem is a community of organisms plus their physical environment.",
+    "Energy flows through it; nutrients cycle within it.",
+    "Biodiversity generally adds resilience to shocks.",
+    "Keystone species shape the whole system out of proportion to their numbers."
+   ],
+   "topic": "Ecosystems"
+  },
+  {
+   "category": "science",
+   "facts": [
+    "The Big Bang model says the universe expanded from a hot, dense state about 13.8 billion years ago.",
+    "The cosmic microwave background is its cooled afterglow.",
+    "Galaxies recede from each other as space expands.",
+    "The model describes expansion, not what, if anything, came before."
+   ],
+   "topic": "Big Bang"
+  },
+  {
+   "category": "science",
+   "facts": [
+    "Light travels at 299,792 kilometers per second in vacuum.",
+    "Nothing with mass can reach that speed.",
+    "It is the speed limit for information and causality.",
+    "Light slows in materials, which is why lenses work."
+   ],
+   "topic": "Speed of light"
+  },
+  {
+   "category": "history",
+   "facts": [
+    "Gutenberg's movable-type press appeared in the 1440s.",
+    "It slashed the cost of books and spread literacy.",
+    "It amplified the Reformation by spreading pamphlets fast.",
+    "Historians call it an information revolution."
+   ],
+   "topic": "Printing press"
+  },
+  {
+   "category": "history",
+   "facts": [
+    "The Industrial Revolution mechanized production starting in late-1700s Britain.",
+    "Steam power, factories, and railways transformed economies.",
+    "It drove mass urbanization.",
+    "Living standards rose eventually, but early industrial cities were grim."
+   ],
+   "topic": "Industrial Revolution"
+  },
+  {
+   "category": "history",
+   "facts": [
+    "World War I was triggered by the assassination of Archduke Franz Ferdinand in Sarajevo in 1914.",
+    "Alliances, militarism, nationalism, and imperialism made a local crisis continental.",
+    "Trench warfare on the Western Front caused horrific casualties.",
+    "It ended in 1918 and redrew the map of Europe."
+   ],
+   "topic": "World War I"
+  },
+  {
+   "category": "history",
+   "facts": [
+    "World War II ran from 1939 to 1945, pitting the Axis against the Allies.",
+    "It began with Germany's invasion of Poland.",
+    "It ended with Germany's surrender and atomic bombs dropped on Japan.",
+    "It remains the deadliest conflict in human history."
+   ],
+   "topic": "World War II"
+  },
+  {
+   "category": "history",
+   "facts": [
+    "Apollo 11 landed humans on the Moon in July 1969.",
+    "Neil Armstrong and Buzz Aldrin walked on the surface while Michael Collins orbited.",
+    "It was the peak achievement of the US-Soviet space race.",
+    "No human has been back since 1972."
+   ],
+   "topic": "Moon landing"
+  },
+  {
+   "category": "history",
+   "facts": [
+    "The Berlin Wall fell in November 1989.",
+    "It had divided the city since 1961 as the Cold War's starkest symbol.",
+    "Germany reunified less than a year later.",
+    "The Soviet Union itself dissolved in 1991."
+   ],
+   "topic": "Fall of the Berlin Wall"
+  },
+  {
+   "category": "history",
+   "facts": [
+    "ARPANET was the first packet-switching network and the internet's ancestor.",
+    "Its first message was sent in 1969.",
+    "It was funded by the US defense research agency ARPA.",
+    "TCP/IP replaced its original protocol in 1983."
+   ],
+   "topic": "ARPANET"
+  },
+  {
+   "category": "history",
+   "facts": [
+    "The Renaissance revived classical art and learning from the 14th to 16th centuries.",
+    "It began in the Italian city-states.",
+    "Figures like Leonardo da Vinci and Michelangelo defined it.",
+    "It set the stage for the Reformation and the scientific revolution."
+   ],
+   "topic": "Renaissance"
+  },
+  {
+   "category": "history",
+   "facts": [
+    "The French Revolution began in 1789 and toppled the monarchy.",
+    "Its ideals were liberty, equality, fraternity.",
+    "It descended into the Terror before stabilizing under Napoleon.",
+    "It spread nationalism and legal equality across Europe."
+   ],
+   "topic": "French Revolution"
+  },
+  {
+   "category": "history",
+   "facts": [
+    "The American Civil War ran from 1861 to 1865, Union against Confederacy.",
+    "Slavery was the central cause.",
+    "The Union victory preserved the nation and ended slavery.",
+    "It remains the deadliest war in American history."
+   ],
+   "topic": "American Civil War"
+  },
+  {
+   "category": "history",
+   "facts": [
+    "Rome dominated the Mediterranean world for centuries.",
+    "Its legacies include law, roads, aqueducts, and the Romance languages.",
+    "The western empire fell in 476 CE; the eastern half lasted a thousand years more.",
+    "Its administrative ideas shaped Europe long after."
+   ],
+   "topic": "Roman Empire"
+  },
+  {
+   "category": "history",
+   "facts": [
+    "Egyptian pyramids were tombs for pharaohs.",
+    "The Great Pyramid of Giza was built around 2560 BCE.",
+    "It was the tallest human-made structure for over 3,800 years.",
+    "Its sides align to the cardinal directions with remarkable precision."
+   ],
+   "topic": "Egyptian pyramids"
+  },
+  {
+   "category": "history",
+   "facts": [
+    "The Mongol Empire became the largest contiguous land empire in history.",
+    "Genghis Khan united the steppe tribes in the early 1200s.",
+    "It reopened Silk Road trade across Eurasia.",
+    "Its conquests were devastating; its peace enabled exchange."
+   ],
+   "topic": "Mongol Empire"
+  },
+  {
+   "category": "history",
+   "facts": [
+    "The Silk Road was a network of trade routes linking China to the Mediterranean.",
+    "It carried silk, spices, paper, and gunpowder west; glass and horses east.",
+    "Ideas and religions traveled with the goods.",
+    "It was routes, plural, not one road."
+   ],
+   "topic": "Silk Road"
+  },
+  {
+   "category": "history",
+   "facts": [
+    "European voyages of the 15th and 16th centuries opened sustained global trade.",
+    "Columbus reached the Americas in 1492.",
+    "The exchange transformed diets worldwide: potatoes, tomatoes, and maize crossed oceans.",
+    "It was catastrophic for indigenous peoples through disease and conquest."
+   ],
+   "topic": "Age of Exploration"
+  },
+  {
+   "category": "history",
+   "facts": [
+    "The Cold War was the US-Soviet rivalry from 1947 to 1991.",
+    "It played out through proxy wars, an arms race, and the space race.",
+    "Nuclear deterrence kept it from turning hot between the superpowers.",
+    "It ended with the Soviet Union's collapse."
+   ],
+   "topic": "Cold War"
+  },
+  {
+   "category": "history",
+   "facts": [
+    "The US civil rights movement of the 1950s and 60s fought racial segregation.",
+    "The Montgomery bus boycott and March on Washington were landmark campaigns.",
+    "Martin Luther King Jr. was its most prominent leader.",
+    "The Civil Rights Act of 1964 was its signature legislative win."
+   ],
+   "topic": "Civil rights movement"
+  },
+  {
+   "category": "history",
+   "facts": [
+    "Women's suffrage was the decades-long fight for women's right to vote.",
+    "The US 19th Amendment passed in 1920.",
+    "New Zealand led the world, granting it in 1893.",
+    "It took organized campaigning across generations."
+   ],
+   "topic": "Women's suffrage"
+  },
+  {
+   "category": "history",
+   "facts": [
+    "Alexander Graham Bell patented the telephone in 1876.",
+    "It converted voice into electrical signals and back.",
+    "Elisha Gray filed a similar claim the same day, a famous dispute.",
+    "It collapsed distance for business and personal life alike."
+   ],
+   "topic": "Telephone"
+  },
+  {
+   "category": "history",
+   "facts": [
+    "Edison demonstrated a practical incandescent bulb in 1879.",
+    "He built on decades of others' work with filaments and vacuum.",
+    "Practical lighting required the whole system: generators, wiring, meters.",
+    "Electric light reshaped work hours and city life."
+   ],
+   "topic": "Light bulb"
+  },
+  {
+   "category": "geography",
+   "facts": [
+    "There are seven continents: Africa, Antarctica, Asia, Australia, Europe, North America, South America.",
+    "Asia is the largest by both area and population.",
+    "Europe and Asia are one landmass, divided by convention.",
+    "Continents drift on tectonic plates."
+   ],
+   "topic": "Continents"
+  },
+  {
+   "category": "geography",
+   "facts": [
+    "The largest deserts are polar: the Antarctic Desert is the biggest of all.",
+    "The Sahara is the largest hot desert.",
+    "Deserts are defined by low precipitation, not heat.",
+    "About a third of Earth's land is desert or semi-arid."
+   ],
+   "topic": "Largest deserts"
+  },
+  {
+   "category": "geography",
+   "facts": [
+    "The Nile and the Amazon compete for the title of longest river.",
+    "Both run roughly six and a half to seven thousand kilometers.",
+    "The ranking depends on where you define the source.",
+    "Length records in geography often hinge on definitions."
+   ],
+   "topic": "Longest rivers"
+  },
+  {
+   "category": "geography",
+   "facts": [
+    "The Himalayas hold the world's highest peaks.",
+    "The Andes are the longest continental mountain range.",
+    "Ranges form where plates collide or volcanoes line up.",
+    "Mountains shape climate by blocking weather systems."
+   ],
+   "topic": "Mountain ranges"
+  },
+  {
+   "category": "geography",
+   "facts": [
+    "Earth has five oceans: Pacific, Atlantic, Indian, Southern, and Arctic.",
+    "The Pacific is the largest and deepest.",
+    "Oceans cover about 71 percent of the planet's surface.",
+    "Most of the ocean floor remains unmapped in detail."
+   ],
+   "topic": "Oceans"
+  },
+  {
+   "category": "geography",
+   "facts": [
+    "The equator is the 0-degree latitude line circling Earth's middle.",
+    "It divides the northern and southern hemispheres.",
+    "Day length stays near twelve hours all year there.",
+    "Climate near the equator is warm, though altitude can override latitude."
+   ],
+   "topic": "Equator"
+  },
+  {
+   "category": "geography",
+   "facts": [
+    "Time zones divide the globe into roughly 24 hourly bands.",
+    "They are based on longitude but bent by political borders.",
+    "UTC is the reference everything offsets from.",
+    "Some countries use half-hour or 45-minute offsets."
+   ],
+   "topic": "Time zones"
+  },
+  {
+   "category": "geography",
+   "facts": [
+    "Earthquakes happen when built-up stress releases suddenly along a fault.",
+    "Magnitude scales are logarithmic: each whole number is about 32 times the energy.",
+    "The Pacific Ring of Fire sees most major quakes.",
+    "Buildings, not shaking itself, cause most casualties."
+   ],
+   "topic": "Earthquakes"
+  },
+  {
+   "category": "geography",
+   "facts": [
+    "Climate zones range from tropical to polar, shaped by latitude and geography.",
+    "The Koeppen system is the standard classification.",
+    "Mountains and ocean currents redraw the simple latitude picture.",
+    "Zones are shifting as the climate warms."
+   ],
+   "topic": "Climate zones"
+  },
+  {
+   "category": "geography",
+   "facts": [
+    "The Amazon is the largest tropical rainforest on Earth.",
+    "It holds a huge share of known species.",
+    "It is often called the lungs of the Earth, though most of its oxygen is consumed locally.",
+    "Deforestation pressure continues from logging and agriculture."
+   ],
+   "topic": "Amazon rainforest"
+  },
+  {
+   "category": "geography",
+   "facts": [
+    "The Sahara is the largest hot desert, spanning North Africa.",
+    "It is roughly the size of the United States.",
+    "Its extent breathes with long climate cycles.",
+    "Saharan dust blows across the Atlantic and fertilizes the Amazon."
+   ],
+   "topic": "Sahara"
+  },
+  {
+   "category": "geography",
+   "facts": [
+    "The Himalayas are young mountains, still rising as India pushes into Asia.",
+    "They hold Everest, the highest peak above sea level, at 8,849 meters.",
+    "The range feeds Asia's great rivers.",
+    "Altitude sickness is the main danger for climbers, not just cold."
+   ],
+   "topic": "Himalayas"
+  },
+  {
+   "category": "geography",
+   "facts": [
+    "The Nile flows north through northeastern Africa to the Mediterranean.",
+    "Its annual flood enabled ancient Egyptian civilization.",
+    "The White Nile and Blue Nile are its two great tributaries.",
+    "It is central to water politics in the region today."
+   ],
+   "topic": "Nile"
+  },
+  {
+   "category": "geography",
+   "facts": [
+    "The Ring of Fire is a horseshoe of volcanoes and earthquake zones around the Pacific.",
+    "Subduction, one plate diving under another, drives it.",
+    "It hosts most of the world's major earthquakes.",
+    "About 90 percent of earthquakes occur along it."
+   ],
+   "topic": "Pacific Ring of Fire"
+  },
+  {
+   "category": "geography",
+   "facts": [
+    "The Great Barrier Reef is the world's largest coral reef system, off Australia.",
+    "It is visible from space and built by billions of tiny polyps.",
+    "Warming oceans cause mass bleaching events.",
+    "Reefs support a disproportionate share of marine life."
+   ],
+   "topic": "Great Barrier Reef"
+  }
+ ]
+}
