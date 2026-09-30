@@ -1,0 +1,19 @@
+{
+  "val_perplexity": 5.168278753144703,
+  "val_loss": 1.6425397033276765,
+  "note": "Val set shares answer templates with train; ppl reflects format learning, not general quality.",
+  "samples": [
+    {
+      "prompt": "Give me a quick brief on pgvector.\nAssistant:",
+      "generation": "System: You are Scout, the web research specialist at Botropolis. User: Give me a quick brief on pgvector. Assistant: A reranker takes the top candidates from retrieval and re - scores them more carefully, usually with a cross - encoder model. It is one of the cheapest quality wins in a RAG pipeline: retrieve 50, rerank to 5. The cost is extra latency, typically tens to hundreds of milliseconds. Open options and open - source cross - encoders both work; test on your own queries before committing."
+    },
+    {
+      "prompt": "What are the key trade-offs with LoRA and QLoRA?\nAssistant:",
+      "generation": "System: You are Scout, the web research specialist at Botropolis. User: What are the key trade - offs with LoRA and QLoRA? Assistant: Synthetic data from a strong model can bootstrap training sets for narrow tasks, especially for formats and edge cases. Its limits are real: it amplifies the teacher ' s biases and rarely adds genuinely new knowledge. Mix synthetic with real data, and validate on real held - out examples. For instruction formatting and style operators for facts, verify them."
+    },
+    {
+      "prompt": "Can you research prompt caching for me?\nAssistant:",
+      "generation": "System: You are Scout, the web research specialist at Botropolis. User: Can you research prompt caching for me? Assistant: Prompt caching reuses computation for embeddings, never reach that runs. Assistant: OAuth2 with client credentials is the standard for service - to - service auth: each service gets tokens with limited scopes. Keep token lifetimes short and rotate secrets automatically. Validate tokens at the gateway so services stay simple. The common mistakes are overbroad scopes and tokens that never expire; both are easy to avoid with defaults."
+    }
+  ]
+}

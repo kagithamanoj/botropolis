@@ -4,6 +4,23 @@ This is where Botropolis agents get their own fine-tuned models. The flow is
 simple: collect examples of the agent doing good work, train a small model on
 them, evaluate it, and register it in `models/registry.yaml`.
 
+## Two paths
+
+**Path 1: CPU demo, fully in-repo.** `training/train_scout_tiny.py` trains a
+~6M parameter decoder-only transformer from scratch on CPU, no GPU needed.
+It builds a word-level tokenizer from the data, trains next-token prediction
+on `training/datasets/scout_demo.jsonl` (300 synthetic Scout Q&A pairs made
+by `training/make_scout_demo_dataset.py`), and saves the best checkpoint to
+`models/weights/botropolis-scout-tiny/` with tokenizer, config, and eval
+results. This proves the pipeline end to end. The model is a demo, not
+something to deploy.
+
+**Path 2: real LoRA fine-tune on a free GPU.** `training/colab_lora.py` is a
+ready-to-run script for Colab or Kaggle: it LoRA-tunes SmolLM2-135M (or
+Qwen2.5-0.5B) on any dataset in the repo's chat JSONL format and saves the
+adapter. Setup steps are commented at the top of the file. This is how you
+get a model worth registering and actually using.
+
 ## How it works here
 
 This repo does not bundle a GPU trainer. `train.py` validates your config and
