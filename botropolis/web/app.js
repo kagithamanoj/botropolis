@@ -11,12 +11,23 @@
   var sendBtn = document.getElementById("ask-send");
   var statusEl = document.getElementById("status");
   var tabChat = document.getElementById("tab-chat");
+  var tabWarroom = document.getElementById("tab-warroom");
+  var tabAnalytics = document.getElementById("tab-analytics");
   var tabRoster = document.getElementById("tab-roster");
   var viewChat = document.getElementById("view-chat");
+  var viewWarroom = document.getElementById("view-warroom");
+  var viewAnalytics = document.getElementById("view-analytics");
   var viewRoster = document.getElementById("view-roster");
   var rosterList = document.getElementById("roster-list");
   var deptDetail = document.getElementById("dept-detail");
   var agentDetail = document.getElementById("agent-detail");
+  var warroomAgent = document.getElementById("warroom-agent");
+  var warroomMessages = document.getElementById("warroom-messages");
+  var warroomForm = document.getElementById("warroom-form");
+  var warroomInput = document.getElementById("warroom-input");
+  var warroomSend = document.getElementById("warroom-send");
+  var analyticsTable = document.getElementById("analytics-table");
+  var analyticsRefresh = document.getElementById("analytics-refresh");
 
   /* Escape user and model text before injecting into the DOM. */
   function esc(text) {
@@ -32,19 +43,33 @@
 
   /* ---- Tabs ---- */
 
+  var TABS = {
+    chat: { tab: tabChat, view: viewChat },
+    warroom: { tab: tabWarroom, view: viewWarroom },
+    analytics: { tab: tabAnalytics, view: viewAnalytics },
+    roster: { tab: tabRoster, view: viewRoster }
+  };
+
   function showTab(which) {
-    var chat = which === "chat";
-    tabChat.classList.toggle("active", chat);
-    tabRoster.classList.toggle("active", !chat);
-    viewChat.classList.toggle("hidden", !chat);
-    viewRoster.classList.toggle("hidden", chat);
-    if (!chat && !rosterList.dataset.loaded) {
+    Object.keys(TABS).forEach(function (key) {
+      var on = key === which;
+      TABS[key].tab.classList.toggle("active", on);
+      TABS[key].view.classList.toggle("hidden", !on);
+    });
+    if (which === "roster" && !rosterList.dataset.loaded) {
       loadDepartments();
+    }
+    if (which === "warroom" && !warroomAgent.dataset.loaded) {
+      loadWarroomAgents();
+    }
+    if (which === "analytics") {
+      loadAnalytics();
     }
   }
 
-  tabChat.addEventListener("click", function () { showTab("chat"); });
-  tabRoster.addEventListener("click", function () { showTab("roster"); });
+  Object.keys(TABS).forEach(function (key) {
+    TABS[key].tab.addEventListener("click", function () { showTab(key); });
+  });
 
   /* ---- Chat ---- */
 
@@ -74,6 +99,22 @@
     return output.toLowerCase().indexOf(STUB_MARKER) !== -1;
   }
 
+  function agentCardHtml(r) {
+    var html = '<div class="agent-card">';
+    html += '<div class="agent-head"><span class="agent-name">' + esc(r.agent_name) +
+            '</span><span class="agent-dept">' + esc(r.department) + "</span></div>";
+    if (!r.success) {
+      html += '<p class="output">Failed: ' + esc(r.error || "unknown error") + "</p>";
+    } else {
+      if (isStub(r.output || "")) {
+        html += '<span class="stub-badge">offline stub</span>';
+      }
+      html += '<p class="output">' + esc(r.output) + "</p>";
+    }
+    html += "</div>";
+    return html;
+  }
+
   function renderReport(report) {
     var wrap = document.createElement("div");
     wrap.className = "msg company";
@@ -91,18 +132,7 @@
     }
 
     (report.results || []).forEach(function (r) {
-      html += '<div class="agent-card">';
-      html += '<div class="agent-head"><span class="agent-name">' + esc(r.agent_name) +
-              '</span><span class="agent-dept">' + esc(r.department) + "</span></div>";
-      if (!r.success) {
-        html += '<p class="output">Failed: ' + esc(r.error || "unknown error") + "</p>";
-      } else {
-        if (isStub(r.output || "")) {
-          html += '<span class="stub-badge">offline stub</span>';
-        }
-        html += '<p class="output">' + esc(r.output) + "</p>";
-      }
-      html += "</div>";
+      html += agentCardHtml(r);
     });
 
     html += "</div>";
@@ -155,6 +185,130 @@
         inputEl.focus();
       });
   });
+
+  /* ---- War room: direct chat with one agent ---- */
+
+  function loadWarroomAgents() {
+    fetch("/agents")
+      .then(function (resp) { return resp.json(); })
+      .then(function (data) {
+        warroomAgent.dataset.loaded = "1";
+        warroomAgent.innerHTML = "";
+        data.agents.forEach(function (a) {
+          var opt = document.createElement("option");
+          opt.value = a.name;
+          opt.textContent = a.name + " - " + a.title;
+          warroomAgent.appendChild(opt);
+        });
+        addWarroomNote("Pick an agent and ask. This goes straight to them, no CEO routing.");
+      })
+      .catch(function () {
+        warroomAgent.innerHTML = "";
+        addWarroomNote("Could not load agents.");
+      });
+  }
+
+  function addWarroomNote(text) {
+    var wrap = document.createElement("div");
+    wrap.className = "msg company";
+    wrap.innerHTML = '<div class="report"><div class="ceo-label">War room</div>' +
+      '<p class="summary">' + esc(text) + "</p></div>";
+    warroomMessages.appendChild(wrap);
+  }
+
+  function addWarroomUser(text) {
+    var wrap = document.createElement("div");
+    wrap.className = "msg user";
+    wrap.innerHTML = '<div class="bubble">' + esc(text) + "</div>";
+    warroomMessages.appendChild(wrap);
+  }
+
+  function addWarroomTyping() {
+    var wrap = document.createElement("div");
+    wrap.className = "msg company";
+    wrap.id = "warroom-typing";
+    wrap.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
+    warroomMessages.appendChild(wrap);
+  }
+
+  function removeWarroomTyping() {
+    var row = document.getElementById("warroom-typing");
+    if (row) row.remove();
+  }
+
+  function addWarroomResult(name, r) {
+    var wrap = document.createElement("div");
+    wrap.className = "msg company";
+    wrap.innerHTML = '<div class="report"><div class="ceo-label">' + esc(name) +
+      "</div>" + agentCardHtml(r) + "</div>";
+    warroomMessages.appendChild(wrap);
+  }
+
+  warroomForm.addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var text = warroomInput.value.trim();
+    var name = warroomAgent.value;
+    if (!text || !name) return;
+    warroomInput.value = "";
+    warroomSend.disabled = true;
+    addWarroomUser(text);
+    addWarroomTyping();
+
+    fetch("/agents/" + encodeURIComponent(name) + "/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ request: text })
+    })
+      .then(function (resp) {
+        if (!resp.ok) throw new Error("server returned " + resp.status);
+        return resp.json();
+      })
+      .then(function (result) {
+        removeWarroomTyping();
+        addWarroomResult(name, result);
+      })
+      .catch(function (err) {
+        removeWarroomTyping();
+        addWarroomNote("Something went wrong: " + err.message);
+      })
+      .finally(function () {
+        warroomSend.disabled = false;
+        warroomInput.focus();
+      });
+  });
+
+  /* ---- Analytics ---- */
+
+  function loadAnalytics() {
+    fetch("/analytics")
+      .then(function (resp) { return resp.json(); })
+      .then(function (data) {
+        var agents = data.agents || {};
+        var names = Object.keys(agents);
+        var totals = data.totals || {};
+        if (!names.length) {
+          analyticsTable.innerHTML = "<p>No runs recorded yet. Chat or use the war room first.</p>";
+          return;
+        }
+        var html = '<table class="analytics-table">';
+        html += "<tr><th>Agent</th><th>Calls</th><th>Avg ms</th><th>Tokens</th><th>Stub runs</th></tr>";
+        names.forEach(function (n) {
+          var a = agents[n];
+          html += "<tr><td>" + esc(n) + "</td><td>" + a.calls + "</td><td>" +
+            a.avg_latency_ms + "</td><td>" + a.tokens_total + "</td><td>" +
+            a.stub_calls + "</td></tr>";
+        });
+        html += "</table>";
+        html += '<p class="totals-line">Total calls: ' + totals.calls +
+          " - stub runs: " + totals.stub_calls + "</p>";
+        analyticsTable.innerHTML = html;
+      })
+      .catch(function () {
+        analyticsTable.innerHTML = "<p>Could not load analytics.</p>";
+      });
+  }
+
+  analyticsRefresh.addEventListener("click", loadAnalytics);
 
   /* ---- Roster ---- */
 

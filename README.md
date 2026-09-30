@@ -90,10 +90,17 @@ uvicorn botropolis.server:app --reload
 # open http://localhost:8000
 ```
 
-Two tabs. Chat talks to the CEO: you ask, it routes to departments, and
-you get the summary plus one card per agent that did work. Outputs from
-the offline stub are labeled as such. Roster shows every department and
+Three tabs. Chat talks to the CEO: you ask, it routes to departments, and
+you get the summary plus one card per agent that did work. War room lets
+you pick one agent and talk to it directly, skipping the CEO.
+Analytics shows per-agent usage: calls, average latency, and tokens used.
+Outputs from the offline stub are labeled as such, and stub runs report
+0 tokens. Roster shows every department and
 agent with their specs, tools, and example tasks.
+
+Every agent invocation, through the CEO or the war room, is appended to
+`botropolis/data/usage.jsonl` (gitignored). `GET /analytics` returns the
+per-agent totals from that log.
 
 ## Models
 

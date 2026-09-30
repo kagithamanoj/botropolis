@@ -18,6 +18,8 @@
     </div>
     <nav class="tabs">
       <button id="tab-chat" class="tab active" type="button">Chat</button>
+      <button id="tab-warroom" class="tab" type="button">War room</button>
+      <button id="tab-analytics" class="tab" type="button">Analytics</button>
       <button id="tab-roster" class="tab" type="button">Roster</button>
     </nav>
   </header>
@@ -32,6 +34,32 @@
         <button type="submit" id="ask-send">Send</button>
       </form>
       <p class="hint">The CEO breaks your request into pieces and routes it to the right departments.</p>
+    </section>
+
+    <!-- War room view: direct chat with one agent -->
+    <section id="view-warroom" class="view hidden">
+      <div class="warroom-bar">
+        <label for="warroom-agent">Agent</label>
+        <select id="warroom-agent" aria-label="Choose an agent"></select>
+      </div>
+      <div id="warroom-messages" class="messages" aria-live="polite"></div>
+      <form id="warroom-form" class="composer" autocomplete="off">
+        <input id="warroom-input" type="text" placeholder="Ask this agent directly..."
+               aria-label="Ask this agent directly">
+        <button type="submit" id="warroom-send">Send</button>
+      </form>
+      <p class="hint">The war room skips the CEO. You talk to one agent, in its own context.</p>
+    </section>
+
+    <!-- Analytics view -->
+    <section id="view-analytics" class="view hidden">
+      <div class="analytics-head">
+        <h2>Usage</h2>
+        <button id="analytics-refresh" type="button" class="tab">Refresh</button>
+      </div>
+      <div id="analytics-table"></div>
+      <p class="hint">Counts every agent run, via the CEO or the war room. Runs on the
+      offline stub report 0 tokens; those rows are estimates at best.</p>
     </section>
 
     <!-- Roster view -->

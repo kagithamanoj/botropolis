@@ -72,6 +72,7 @@ class Agent:
         try:
             output = self.client.chat(self.model, self.build_messages(task))
             provider = self.client.provider_for(self.model)
+            usage = getattr(self.client, "last_usage", None) or {}
             return AgentResult(
                 agent_name=self.name,
                 department=self.department,
@@ -79,7 +80,13 @@ class Agent:
                 output=output,
                 success=True,
                 confidence=0.85 if provider != "stub" else 0.5,
-                metadata={"model": self.model, "provider": provider, "stub": provider == "stub"},
+                metadata={
+                    "model": self.model,
+                    "provider": provider,
+                    "stub": provider == "stub",
+                    "tokens_in": int(usage.get("input", 0)),
+                    "tokens_out": int(usage.get("output", 0)),
+                },
                 elapsed_seconds=time.time() - started,
             )
         except Exception as exc:  # never let one agent crash the company
