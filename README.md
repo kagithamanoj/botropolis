@@ -77,7 +77,7 @@ Run the API server:
 
 ```bash
 uvicorn botropolis.server:app --reload
-# POST /ask {"request": "..."}   GET /agents   GET /departments
+# POST /ask {"request": "..."}   POST /agents/{name}/ask   GET /agents   GET /departments   GET /analytics
 ```
 
 ## Web UI
@@ -145,7 +145,7 @@ botropolis/
   core/        agent base class, registry, CEO orchestrator, model client
   agents/      one folder per department, one YAML spec per agent
   tools/       shared tools agents can call
-  server.py    FastAPI: POST /ask, GET /agents, GET /departments
+  server.py    FastAPI: POST /ask, POST /agents/{name}/ask, GET /agents, GET /departments, GET /analytics
 models/        registry.yaml and model cards
 training/      configs, datasets, train.py, evaluate.py
 examples/      demo.py, add_agent.py
