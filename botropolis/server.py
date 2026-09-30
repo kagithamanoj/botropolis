@@ -9,15 +9,24 @@ Endpoints:
     GET  /agents/{name} Show one agent's details
     GET  /departments   List departments and their headcounts
     GET  /health        Liveness check
+    GET  /              Web UI (static files under /static)
+
+The web UI lives in botropolis/web/ and needs no build step.
 """
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from botropolis.core.orchestrator import CEO
 from botropolis.core.registry import AgentRegistry
+
+WEB_DIR = Path(__file__).parent / "web"
 
 app = FastAPI(
     title="Botropolis",
@@ -39,6 +48,17 @@ class AskRequest(BaseModel):
 def health() -> dict:
     """Liveness check."""
     return {"status": "ok", "agents": len(registry)}
+
+
+@app.get("/", include_in_schema=False)
+def index() -> FileResponse:
+    """Serve the web UI."""
+    return FileResponse(WEB_DIR / "index.html")
+
+
+# Static assets for the web UI. Mounted after the API routes so /ask,
+# /agents, and friends keep working.
+app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 
 
 @app.post("/ask")

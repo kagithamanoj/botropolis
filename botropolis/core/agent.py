@@ -104,4 +104,5 @@ class Agent:
             "specialty": self.specialty,
             "model": self.model,
             "tools": self.tools,
+            "example_tasks": self.example_tasks,
         }

@@ -80,6 +80,21 @@ uvicorn botropolis.server:app --reload
 # POST /ask {"request": "..."}   GET /agents   GET /departments
 ```
 
+## Web UI
+
+The same server also serves a web UI. No build step, no frameworks,
+plain HTML/CSS/JS. Works fine on a phone.
+
+```bash
+uvicorn botropolis.server:app --reload
+# open http://localhost:8000
+```
+
+Two tabs. Chat talks to the CEO: you ask, it routes to departments, and
+you get the summary plus one card per agent that did work. Outputs from
+the offline stub are labeled as such. Roster shows every department and
+agent with their specs, tools, and example tasks.
+
 ## Models
 
 Every agent spec names a model. `models/registry.yaml` is the central
@@ -145,8 +160,10 @@ Details in `docs/adding-agents.md`.
 - Real tool execution wired into the model clients (function calling)
 - Conversation memory per agent
 - Department-level fine-tunes registered with eval scores
-- A simple web UI on top of the API server
 - Nightly eval runs in CI
+
+Done:
+- A simple web UI on top of the API server
 
 ## License
 

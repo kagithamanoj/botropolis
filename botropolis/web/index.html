@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Botropolis - A company of bots</title>
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">B</span>
+      <div>
+        <h1>Botropolis</h1>
+        <p class="tagline">A company of bots</p>
+      </div>
+    </div>
+    <nav class="tabs">
+      <button id="tab-chat" class="tab active" type="button">Chat</button>
+      <button id="tab-roster" class="tab" type="button">Roster</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Chat view -->
+    <section id="view-chat" class="view">
+      <div id="messages" class="messages" aria-live="polite"></div>
+      <form id="ask-form" class="composer" autocomplete="off">
+        <input id="ask-input" type="text" placeholder="Ask the company anything..."
+               aria-label="Ask the company anything">
+        <button type="submit" id="ask-send">Send</button>
+      </form>
+      <p class="hint">The CEO breaks your request into pieces and routes it to the right departments.</p>
+    </section>
+
+    <!-- Roster view -->
+    <section id="view-roster" class="view hidden">
+      <div id="roster-list" class="roster-list"></div>
+      <div id="dept-detail" class="hidden"></div>
+      <div id="agent-detail" class="hidden"></div>
+    </section>
+  </main>
+
+  <footer class="statusbar">
+    <span id="status">Connecting...</span>
+  </footer>
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>
