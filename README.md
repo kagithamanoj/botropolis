@@ -116,7 +116,9 @@ uvicorn botropolis.server:app --reload
 ```
 
 Five tabs. Chat talks to Manoj: you ask, he routes to departments, and
-you get the summary plus one card per agent that did work. Teaming lets
+you get the summary plus one card per agent that did work. Chat keeps
+the last few turns as context, so follow-up questions work; Clear wipes
+it. Teaming lets
 you pick any agents, set the rounds, and watch them collaborate on a task.
 War room lets
 you pick one agent and talk to it directly, skipping Manoj.

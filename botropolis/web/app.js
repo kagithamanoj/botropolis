@@ -85,6 +85,23 @@
 
   /* ---- Chat ---- */
 
+  /* Recent turns sent with each request so follow-up questions have
+     context. Capped; Clear wipes it. */
+  var chatHistory = [];
+  var CHAT_HISTORY_TURNS = 10;
+
+  function pushChatTurn(role, content) {
+    chatHistory.push({ role: role, content: content });
+    while (chatHistory.length > CHAT_HISTORY_TURNS) chatHistory.shift();
+  }
+
+  var askClear = document.getElementById("ask-clear");
+  askClear.addEventListener("click", function () {
+    chatHistory = [];
+    messagesEl.innerHTML = "";
+    inputEl.focus();
+  });
+
   function addUserMessage(text) {
     var wrap = document.createElement("div");
     wrap.className = "msg user";
@@ -184,11 +201,12 @@
     sendBtn.disabled = true;
     addUserMessage(text);
     addTyping();
+    pushChatTurn("user", text);
 
     fetch("/ask", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ request: text })
+      body: JSON.stringify({ request: text, history: chatHistory.slice(0, -1) })
     })
       .then(function (resp) {
         if (!resp.ok) throw new Error("server returned " + resp.status);
@@ -197,6 +215,7 @@
       .then(function (report) {
         removeTyping();
         renderReport(report);
+        pushChatTurn("assistant", report.summary || "Done.");
       })
       .catch(function (err) {
         removeTyping();

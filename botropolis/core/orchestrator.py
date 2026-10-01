@@ -83,6 +83,28 @@ MAX_TEAM_ROUNDS = 3
 # Enough for continuity, not so much that prompts explode.
 PRIOR_OUTPUT_CHARS = 800
 
+# Chat history attached to tasks: last N turns, each capped, so follow-up
+# questions carry context without blowing up the prompt.
+HISTORY_TURNS = 10
+HISTORY_TURN_CHARS = 500
+
+
+def _history_context(
+    history: Optional[List[Dict[str, str]]],
+) -> Dict[str, str]:
+    """Pack recent chat turns into task context. Empty dict when none."""
+    if not history:
+        return {}
+    lines = []
+    for turn in history[-HISTORY_TURNS:]:
+        role = turn.get("role", "user")
+        content = (turn.get("content") or "").strip()[:HISTORY_TURN_CHARS]
+        if content:
+            lines.append(f"{role}: {content}")
+    if not lines:
+        return {}
+    return {"chat_history": "\n".join(lines)}
+
 
 class CEO:
     """Orchestrates the company: plans work, assigns agents, reports back."""
@@ -110,14 +132,22 @@ class CEO:
                 scores.append((dept, hits))
         return sorted(scores, key=lambda item: (-item[1], item[0]))
 
-    def plan(self, request: str) -> List[Task]:
-        """Decompose a request into one task per relevant department."""
+    def plan(
+        self, request: str, history: Optional[List[Dict[str, str]]] = None
+    ) -> List[Task]:
+        """Decompose a request into one task per relevant department.
+
+        history is a list of {"role": "user"|"assistant", "content": str}
+        turns; the tail of it is attached to every task as context so
+        agents can resolve follow-ups like "what about the second one?".
+        """
         scored = self.score_departments(request)
         departments = [dept for dept, _ in scored[:3]]
         if not departments:
             departments = ["research"] if "research" in self.registry.departments else [
                 self.registry.departments[0]
             ]
+        context = _history_context(history)
         tasks = []
         for dept in departments:
             focus = f" (focus: {request[:80]})" if len(departments) > 1 else ""
@@ -125,6 +155,7 @@ class CEO:
                 Task(
                     description=f"{request}{focus}",
                     department=dept,
+                    context=dict(context),
                 )
             )
         return tasks
@@ -144,10 +175,12 @@ class CEO:
                 pass
         return agents[0]
 
-    def handle(self, request: str) -> CompanyReport:
+    def handle(
+        self, request: str, history: Optional[List[Dict[str, str]]] = None
+    ) -> CompanyReport:
         """Run the full company workflow for one user request."""
         started = time.time()
-        tasks = self.plan(request)
+        tasks = self.plan(request, history=history)
         results: List[AgentResult] = []
         departments: List[str] = []
         for task in tasks:

@@ -44,3 +44,40 @@ def test_api_routes_still_work():
     resp = client.post("/ask", json={"request": "ping"})
     assert resp.status_code == 200
     assert "summary" in resp.json()
+
+
+def test_ask_accepts_chat_history():
+    resp = client.post(
+        "/ask",
+        json={
+            "request": "And the second one?",
+            "history": [
+                {"role": "user", "content": "List two options."},
+                {"role": "assistant", "content": "Option A and option B."},
+            ],
+        },
+    )
+    assert resp.status_code == 200
+    assert "summary" in resp.json()
+
+
+def test_ask_rejects_bad_history_role():
+    resp = client.post(
+        "/ask",
+        json={
+            "request": "hi",
+            "history": [{"role": "system", "content": "sneaky"}],
+        },
+    )
+    assert resp.status_code == 422
+
+
+def test_ask_rejects_too_much_history():
+    resp = client.post(
+        "/ask",
+        json={
+            "request": "hi",
+            "history": [{"role": "user", "content": "x"} for _ in range(25)],
+        },
+    )
+    assert resp.status_code == 422
