@@ -179,6 +179,9 @@ class CEO:
         """
         if not agent_names:
             raise ValueError("team() needs at least one agent")
+        # Drop repeats while keeping the listed order. Running the same
+        # agent twice in one round adds cost, not insight.
+        agent_names = list(dict.fromkeys(agent_names))
         agents: List[Agent] = []
         for name in agent_names:
             try:
@@ -231,11 +234,12 @@ class CEO:
         self, request: str, agents: List[Agent], team_rounds: List[TeamRound]
     ) -> str:
         """Summarize the final state of a team session."""
+        num_rounds = max(r.round_number for r in team_rounds)
         lines = [
             f"Team request: {request}",
             f"Team: {', '.join(a.name for a in agents)} "
             f"({len(team_rounds)} runs over "
-            f"{max(r.round_number for r in team_rounds)} rounds)",
+            f"{num_rounds} round{'s' if num_rounds != 1 else ''})",
             "",
             "Final state per agent:",
         ]
