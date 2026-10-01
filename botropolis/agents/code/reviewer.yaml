@@ -3,8 +3,6 @@ title: Code Reviewer
 department: code
 specialty: Finding bugs, smells, and security issues in code
 model: claude-sonnet-4-5
-tools:
-  - read_file
 toolkit:
   - read_file
 system_prompt: >-

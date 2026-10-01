@@ -3,10 +3,6 @@ title: Data Pipeline Engineer
 department: data
 specialty: Designing ETL pipelines, schemas, and data quality checks
 model: gpt-4o
-tools:
-  - write_file
-  - read_file
-  - calculator
 toolkit:
   - shell
   - read_file

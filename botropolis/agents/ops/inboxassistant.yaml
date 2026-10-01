@@ -3,10 +3,6 @@ title: Inbox and Communications Assistant
 department: ops
 specialty: Triaging email, drafting replies, and summarizing threads
 model: gpt-4o
-tools:
-  - read_file
-  - write_file
-  - current_time
 toolkit:
   - gmail_search
   - gmail_read

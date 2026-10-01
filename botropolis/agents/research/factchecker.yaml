@@ -3,9 +3,6 @@ title: Claim Verification Specialist
 department: research
 specialty: Verifying claims against evidence and rating confidence
 model: claude-sonnet-4-5
-tools:
-  - web_search
-  - read_file
 toolkit:
   - web_search
   - web_fetch

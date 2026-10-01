@@ -3,10 +3,6 @@ title: Software Engineer
 department: code
 specialty: Writing clean, working code from requirements
 model: claude-sonnet-4-5
-tools:
-  - write_file
-  - read_file
-  - calculator
 toolkit:
   - shell
   - read_file
