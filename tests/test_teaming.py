@@ -93,3 +93,22 @@ def test_team_endpoint_logs_usage(monkeypatch, tmp_path):
     summary = usage.get_summary()
     assert summary["agents"]["Ethan"]["calls"] == 2
     assert summary["agents"]["Liam"]["calls"] == 2
+
+
+def test_team_dedupes_repeated_agents():
+    ceo = CEO()
+    report = ceo.team("write a python function", ["Liam", "Sofia", "Liam"], rounds=1)
+    assert report.agents == ["Liam", "Sofia"]
+    assert [r.agent_name for r in report.rounds] == ["Liam", "Sofia"]
+
+
+def test_team_synthesis_singular_round():
+    ceo = CEO()
+    report = ceo.team("write a python function", ["Liam"], rounds=1)
+    assert "(1 runs over 1 round)" in report.synthesis
+
+
+def test_team_synthesis_plural_rounds():
+    ceo = CEO()
+    report = ceo.team("write a python function", ["Liam"], rounds=2)
+    assert "(2 runs over 2 rounds)" in report.synthesis
