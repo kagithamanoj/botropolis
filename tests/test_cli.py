@@ -52,3 +52,18 @@ def test_evals_subcommand_passes(capsys):
 def test_parser_requires_subcommand():
     with pytest.raises(SystemExit):
         build_parser().parse_args([])
+
+
+def test_notebook_empty(capsys, tmp_path, monkeypatch):
+    monkeypatch.setenv("BOTROPOLIS_WORKSPACE", str(tmp_path))
+    assert main(["notebook"]) == 0
+    assert "empty" in capsys.readouterr().out
+
+
+def test_notebook_prints_notes(capsys, tmp_path, monkeypatch):
+    from botropolis.tools import get_tool
+
+    monkeypatch.setenv("BOTROPOLIS_WORKSPACE", str(tmp_path))
+    get_tool("notes_append").execute(text="Manoj prefers morning standups.")
+    assert main(["notebook"]) == 0
+    assert "Manoj prefers morning standups." in capsys.readouterr().out
