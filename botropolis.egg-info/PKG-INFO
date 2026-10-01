@@ -1,3 +1,23 @@
+Metadata-Version: 2.4
+Name: botropolis
+Version: 0.1.0
+Summary: Botropolis: a company of bots. A multi-agent framework where specialized AI agents work like company departments.
+Author: Manoj Kumar
+License: MIT
+Project-URL: Homepage, https://github.com/kagithamanoj/botropolis
+Keywords: agents,multi-agent,llm,orchestration,ai
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: pyyaml
+Requires-Dist: requests
+Requires-Dist: fastapi
+Requires-Dist: uvicorn
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: httpx; extra == "dev"
+Dynamic: license-file
+
 # Botropolis
 
 **A company of bots.**

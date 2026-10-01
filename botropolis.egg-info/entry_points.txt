@@ -1,0 +1,2 @@
+[console_scripts]
+botropolis = botropolis.cli:main

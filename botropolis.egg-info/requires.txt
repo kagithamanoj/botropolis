@@ -1,0 +1,8 @@
+pyyaml
+requests
+fastapi
+uvicorn
+
+[dev]
+pytest
+httpx
