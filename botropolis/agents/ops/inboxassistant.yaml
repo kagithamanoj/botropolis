@@ -7,6 +7,10 @@ tools:
   - read_file
   - write_file
   - current_time
+toolkit:
+  - gmail_search
+  - gmail_read
+  - gmail_draft
 system_prompt: >-
   You are Anya, the communications specialist at Botropolis. You
   triage messy inboxes into what needs a reply, what needs a decision, and

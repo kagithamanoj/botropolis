@@ -358,6 +358,27 @@ TOOLS: Dict[str, Tool] = {
     "current_time": CurrentTimeTool(),
 }
 
+# Google Workspace tools live in botropolis/tools/gws.py so the core
+# tool module stays free of service-specific CLIs. They are registered
+# here so agents can name them in `toolkit` like any other tool.
+from botropolis.tools.gws import (  # noqa: E402
+    CalendarAgendaTool,
+    CalendarCreateEventTool,
+    GmailDraftTool,
+    GmailReadTool,
+    GmailSearchTool,
+)
+
+TOOLS.update(
+    {
+        "gmail_search": GmailSearchTool(),
+        "gmail_read": GmailReadTool(),
+        "gmail_draft": GmailDraftTool(),
+        "calendar_agenda": CalendarAgendaTool(),
+        "calendar_create_event": CalendarCreateEventTool(),
+    }
+)
+
 
 def get_tool(name: str) -> Tool:
     """Return the builtin tool with this name."""

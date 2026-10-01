@@ -149,7 +149,9 @@ toolkit:
 
 Current toolkits: Ethan and Jack get web search and fetch; Liam
 gets shell plus file tools; Sofia gets file reading; Lucas and
-Elena get shell, file tools, and the calculator. Every other agent
+Elena get shell, file tools, and the calculator; Anya gets Gmail
+search, read, and draft; Tyler gets calendar agenda and event
+creation. Every other agent
 has no toolkit and behaves exactly as before: one model call, one answer.
 
 When an agent has a toolkit, it runs a think-act-observe loop instead of
@@ -171,7 +173,14 @@ result and shown in the web UI agent cards.
 
 Available tools: `web_search` (DuckDuckGo, no key needed), `web_fetch`
 (page text extraction), `shell`, `read_file`, `write_file`, `list_dir`,
-`calculator`, `current_time`.
+`calculator`, `current_time`, `gmail_search`, `gmail_read`, `gmail_draft`,
+`calendar_agenda`, `calendar_create_event`.
+
+Google Workspace tools shell out to `hatch_gws_cli` and degrade
+gracefully when Gmail or Calendar is not connected. Two deliberate
+limits: there is no `gmail_send` (agents draft, humans send), and
+`calendar_create_event` creates private events only, never inviting
+attendees.
 
 Safety model: file and shell tools are confined to an agent workspace
 (`botropolis/data/workspace`, or `BOTROPOLIS_WORKSPACE` to move it).
