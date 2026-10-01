@@ -172,3 +172,46 @@ def test_stream_tolerates_bad_history_param():
         assert resp.status_code == 200
         body = resp.read().decode()
     assert "event: done" in body
+
+
+def test_notebook_endpoint_empty():
+    import os
+
+    from botropolis.tools.builtin import notebook_path
+
+    # Point at a temp workspace so the test never touches the real notebook.
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmp:
+        os.environ["BOTROPOLIS_WORKSPACE"] = tmp
+        try:
+            assert not notebook_path().exists()
+            resp = client.get("/notebook")
+            assert resp.status_code == 200
+            assert resp.json() == {"content": ""}
+        finally:
+            del os.environ["BOTROPOLIS_WORKSPACE"]
+
+
+def test_notebook_endpoint_shows_notes():
+    import os
+    import tempfile
+
+    from botropolis.tools import get_tool
+
+    with tempfile.TemporaryDirectory() as tmp:
+        os.environ["BOTROPOLIS_WORKSPACE"] = tmp
+        try:
+            get_tool("notes_append").execute(text="Manoj prefers morning standups.")
+            resp = client.get("/notebook")
+            assert resp.status_code == 200
+            assert "Manoj prefers morning standups." in resp.json()["content"]
+        finally:
+            del os.environ["BOTROPOLIS_WORKSPACE"]
+
+
+def test_index_has_notebook_tab():
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert 'id="tab-notebook"' in resp.text
+    assert 'id="view-notebook"' in resp.text

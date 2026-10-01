@@ -115,7 +115,7 @@ uvicorn botropolis.server:app --reload
 # open http://localhost:8000
 ```
 
-Five tabs. Chat talks to Manoj: you ask, he routes to departments, and
+Six tabs. Chat talks to Manoj: you ask, he routes to departments, and
 you get the summary plus one card per agent that did work. Chat keeps
 the last few turns as context, so follow-up questions work; Clear wipes
 it. Teaming lets
@@ -124,7 +124,9 @@ War room lets
 you pick one agent and talk to it directly, skipping Manoj. It streams
 the agent's tool calls live as they happen, and like the chat tab it
 keeps the conversation history so follow-ups work.
-Analytics shows per-agent usage: calls, average latency, and tokens used.
+Analytics shows per-agent usage: calls, average latency, tokens used,
+and tool calls.
+Notebook shows the shared company notebook, read-only.
 Outputs from the offline stub are labeled as such, and stub runs report
 0 tokens. Roster shows every department and
 agent with their specs, tools, and example tasks.

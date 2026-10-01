@@ -14,11 +14,13 @@
   var tabTeam = document.getElementById("tab-team");
   var tabWarroom = document.getElementById("tab-warroom");
   var tabAnalytics = document.getElementById("tab-analytics");
+  var tabNotebook = document.getElementById("tab-notebook");
   var tabRoster = document.getElementById("tab-roster");
   var viewChat = document.getElementById("view-chat");
   var viewTeam = document.getElementById("view-team");
   var viewWarroom = document.getElementById("view-warroom");
   var viewAnalytics = document.getElementById("view-analytics");
+  var viewNotebook = document.getElementById("view-notebook");
   var viewRoster = document.getElementById("view-roster");
   var rosterList = document.getElementById("roster-list");
   var deptDetail = document.getElementById("dept-detail");
@@ -56,6 +58,7 @@
     team: { tab: tabTeam, view: viewTeam },
     warroom: { tab: tabWarroom, view: viewWarroom },
     analytics: { tab: tabAnalytics, view: viewAnalytics },
+    notebook: { tab: tabNotebook, view: viewNotebook },
     roster: { tab: tabRoster, view: viewRoster }
   };
 
@@ -76,6 +79,9 @@
     }
     if (which === "analytics") {
       loadAnalytics();
+    }
+    if (which === "notebook") {
+      loadNotebook();
     }
   }
 
@@ -530,6 +536,26 @@
   }
 
   analyticsRefresh.addEventListener("click", loadAnalytics);
+
+  /* ---- Notebook: read-only view of the shared company notebook ---- */
+
+  var notebookContent = document.getElementById("notebook-content");
+  var notebookRefresh = document.getElementById("notebook-refresh");
+
+  function loadNotebook() {
+    notebookContent.textContent = "Loading...";
+    fetch("/notebook")
+      .then(function (resp) { return resp.json(); })
+      .then(function (data) {
+        notebookContent.textContent = data.content ||
+          "The notebook is empty. Agents with the notes tools write here.";
+      })
+      .catch(function () {
+        notebookContent.textContent = "Could not load the notebook.";
+      });
+  }
+
+  notebookRefresh.addEventListener("click", loadNotebook);
 
   /* ---- Roster ---- */
 

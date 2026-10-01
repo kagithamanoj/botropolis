@@ -35,6 +35,7 @@ from botropolis.core import usage
 from botropolis.core.orchestrator import CEO, MAX_TEAM_ROUNDS, history_context
 from botropolis.core.registry import AgentRegistry
 from botropolis.core.schemas import AgentResult, Task
+from botropolis.tools.builtin import notebook_path
 
 WEB_DIR = Path(__file__).parent / "web"
 
@@ -251,6 +252,16 @@ def team(body: TeamRequest) -> dict:
 def analytics() -> dict:
     """Per-agent usage totals: calls, latency, and tokens used."""
     return usage.get_summary()
+
+
+@app.get("/notebook")
+def notebook() -> dict:
+    """Read the shared company notebook. Read-only; agents write via tools."""
+    try:
+        content = notebook_path().read_text(encoding="utf-8")
+    except OSError:
+        content = ""
+    return {"content": content.strip()}
 
 
 @app.get("/agents")
