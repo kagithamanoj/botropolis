@@ -121,7 +121,9 @@ the last few turns as context, so follow-up questions work; Clear wipes
 it. Teaming lets
 you pick any agents, set the rounds, and watch them collaborate on a task.
 War room lets
-you pick one agent and talk to it directly, skipping Manoj.
+you pick one agent and talk to it directly, skipping Manoj. It streams
+the agent's tool calls live as they happen, and like the chat tab it
+keeps the conversation history so follow-ups work.
 Analytics shows per-agent usage: calls, average latency, and tokens used.
 Outputs from the offline stub are labeled as such, and stub runs report
 0 tokens. Roster shows every department and
