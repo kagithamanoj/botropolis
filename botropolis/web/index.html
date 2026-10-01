@@ -18,6 +18,7 @@
     </div>
     <nav class="tabs">
       <button id="tab-chat" class="tab active" type="button">Chat</button>
+      <button id="tab-team" class="tab" type="button">Teaming</button>
       <button id="tab-warroom" class="tab" type="button">War room</button>
       <button id="tab-analytics" class="tab" type="button">Analytics</button>
       <button id="tab-roster" class="tab" type="button">Roster</button>
@@ -34,6 +35,33 @@
         <button type="submit" id="ask-send">Send</button>
       </form>
       <p class="hint">Manoj breaks your request into pieces and routes it to the right departments.</p>
+    </section>
+
+    <!-- Teaming view: run a team of agents in collaboration rounds -->
+    <section id="view-team" class="view hidden">
+      <div class="team-builder">
+        <div class="team-field">
+          <span class="team-label">Agents, in run order</span>
+          <div id="team-agents" class="team-agents"></div>
+        </div>
+        <div class="team-row">
+          <label for="team-rounds">Rounds</label>
+          <select id="team-rounds" aria-label="Collaboration rounds">
+            <option value="1">1</option>
+            <option value="2" selected>2</option>
+            <option value="3">3</option>
+          </select>
+        </div>
+        <form id="team-form" class="composer" autocomplete="off">
+          <input id="team-input" type="text" placeholder="Task for the team..."
+                 aria-label="Task for the team">
+          <button type="submit" id="team-send">Run team</button>
+        </form>
+      </div>
+      <div id="team-results" class="messages" aria-live="polite"></div>
+      <p class="hint">Agents run top to bottom in the order shown. Each one sees the
+      request plus everything its teammates produced before it, so the team can
+      draft, critique, and revise.</p>
     </section>
 
     <!-- War room view: direct chat with one agent -->
