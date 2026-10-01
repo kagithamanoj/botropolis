@@ -347,6 +347,66 @@ class CurrentTimeTool(Tool):
         return datetime.now(timezone.utc).isoformat()
 
 
+# The shared company notebook lives at the top of the agent workspace.
+# It is plain markdown so humans can read and edit it too.
+_NOTES_FILE = "notes.md"
+_NOTES_READ_CHARS = 4000
+
+
+class NotesAppendTool(Tool):
+    """Append a timestamped entry to the shared company notebook."""
+
+    name = "notes_append"
+    description = (
+        "Append a timestamped entry to the shared company notebook. "
+        "Use it to remember durable facts across runs: user preferences, "
+        "decisions made, things to follow up on. Keep entries short."
+    )
+    parameters = {
+        "text": {"type": "string", "description": "The note to append", "required": True},
+    }
+
+    def execute(self, text: str) -> Dict[str, Any]:
+        text = (text or "").strip()
+        if not text:
+            return {"error": "Nothing to note: text was empty."}
+        if len(text) > 2000:
+            text = text[:2000] + "... [truncated]"
+        path = resolve_workspace_path(_NOTES_FILE)
+        stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+        try:
+            with open(path, "a", encoding="utf-8") as fh:
+                fh.write(f"\n## {stamp}\n\n{text}\n")
+        except OSError as exc:
+            return {"error": f"Could not write the notebook: {exc}"}
+        return {"noted": True, "file": workspace_relative(path)}
+
+
+class NotesReadTool(Tool):
+    """Read the shared company notebook, newest entries last."""
+
+    name = "notes_read"
+    description = (
+        "Read the shared company notebook. Returns the most recent "
+        "entries (capped). Check it at the start of a task when past "
+        "context might matter."
+    )
+    parameters = {}
+
+    def execute(self) -> Dict[str, Any]:
+        path = resolve_workspace_path(_NOTES_FILE)
+        try:
+            content = path.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            return {"notes": "", "note": "The notebook is empty."}
+        except OSError as exc:
+            return {"error": f"Could not read the notebook: {exc}"}
+        content = content.strip()
+        if len(content) > _NOTES_READ_CHARS:
+            content = "... [older entries truncated]\n" + content[-_NOTES_READ_CHARS:]
+        return {"notes": content}
+
+
 TOOLS: Dict[str, Tool] = {
     "web_search": WebSearchTool(),
     "web_fetch": WebFetchTool(),
@@ -356,6 +416,8 @@ TOOLS: Dict[str, Tool] = {
     "write_file": WriteFileTool(),
     "list_dir": ListDirTool(),
     "current_time": CurrentTimeTool(),
+    "notes_append": NotesAppendTool(),
+    "notes_read": NotesReadTool(),
 }
 
 # Google Workspace tools live in botropolis/tools/gws.py so the core

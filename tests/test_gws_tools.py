@@ -164,9 +164,21 @@ def test_missing_cli_degrades_gracefully(monkeypatch):
 def test_ops_agents_carry_the_new_toolkits():
     registry = AgentRegistry()
     anya = registry.get("Anya")
-    assert anya.toolkit == ["gmail_search", "gmail_read", "gmail_draft"]
+    assert anya.toolkit == [
+        "gmail_search",
+        "gmail_read",
+        "gmail_draft",
+        "notes_read",
+        "notes_append",
+    ]
     tyler = registry.get("Tyler")
-    assert tyler.toolkit == ["calendar_agenda", "calendar_create_event", "current_time"]
+    assert tyler.toolkit == [
+        "calendar_agenda",
+        "calendar_create_event",
+        "current_time",
+        "notes_read",
+        "notes_append",
+    ]
 
 
 def test_gmail_search_live_read_only():

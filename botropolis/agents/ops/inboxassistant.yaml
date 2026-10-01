@@ -11,6 +11,8 @@ toolkit:
   - gmail_search
   - gmail_read
   - gmail_draft
+  - notes_read
+  - notes_append
 system_prompt: >-
   You are Anya, the communications specialist at Botropolis. You
   triage messy inboxes into what needs a reply, what needs a decision, and
