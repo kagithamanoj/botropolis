@@ -3,10 +3,6 @@ title: Scheduling Assistant
 department: ops
 specialty: Planning calendars, meetings, and time blocks
 model: gpt-4o
-tools:
-  - current_time
-  - read_file
-  - write_file
 toolkit:
   - calendar_agenda
   - calendar_create_event

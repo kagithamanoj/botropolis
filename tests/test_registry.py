@@ -3,6 +3,7 @@
 import pytest
 
 from botropolis.core.registry import AgentRegistry
+from botropolis.tools import TOOLS
 
 EXPECTED_DEPARTMENTS = {
     "research",
@@ -80,3 +81,25 @@ def test_paralegal_has_legal_disclaimer(registry):
     prompt = registry.get("Henry").system_prompt.lower()
     assert "not a lawyer" in prompt
     assert "not legal advice" in prompt or "legal advice" in prompt
+
+
+def test_no_dead_tools_field_in_specs():
+    """Specs must not carry the old display-only 'tools' field.
+
+    toolkit is the single source of truth for what an agent may call;
+    describe() reports it as 'tools' for the roster.
+    """
+    import yaml
+    from pathlib import Path
+
+    specs_dir = Path(__file__).resolve().parent.parent / "botropolis" / "agents"
+    for path in sorted(specs_dir.rglob("*.yaml")):
+        spec = yaml.safe_load(path.read_text())
+        assert "tools" not in spec, f"{path.name} still has a 'tools' field"
+
+
+def test_describe_tools_match_toolkit(registry):
+    for agent in registry.list_all():
+        described = agent.describe()
+        assert described["tools"] == agent.toolkit
+        assert all(t in TOOLS for t in described["tools"])

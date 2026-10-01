@@ -47,7 +47,8 @@ class Agent:
         self.specialty: str = spec["specialty"]
         self.model: str = spec["model"]
         self.system_prompt: str = spec["system_prompt"]
-        self.tools: List[str] = list(spec.get("tools", []))
+        # toolkit is the single source of truth for what the agent may
+        # actually call. There is no separate display-only tools list.
         self.toolkit: List[str] = list(spec.get("toolkit", []))
         self.max_steps: int = int(spec.get("max_steps", DEFAULT_MAX_STEPS))
         unknown = [t for t in self.toolkit if t not in TOOLS]
@@ -156,7 +157,7 @@ class Agent:
             "department": self.department,
             "specialty": self.specialty,
             "model": self.model,
-            "tools": self.tools,
+            "tools": self.toolkit,
             "toolkit": self.toolkit,
             "example_tasks": self.example_tasks,
         }
