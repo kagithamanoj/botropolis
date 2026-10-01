@@ -19,9 +19,9 @@ maps to the code.
  Scout Analyst FactChecker ...
 ```
 
-## CEO (orchestrator)
+## Manoj, the CEO (orchestrator)
 
-`botropolis/core/orchestrator.py` holds the `CEO` class. It does three things:
+`botropolis/core/orchestrator.py` holds the `CEO` class. It does five things:
 
 1. **Plan.** Scores the request against keyword lists per department and
    picks up to three relevant departments. No keywords hit, research gets
@@ -30,6 +30,13 @@ maps to the code.
    (`LEAD_AGENT` map), or the first agent alphabetically as a fallback.
 3. **Report.** Runs each agent, collects `AgentResult` objects, and builds
    a `CompanyReport` with an executive summary.
+4. **Team.** `team()` runs named agents in collaboration rounds: each
+   agent's prompt includes prior teammates' outputs, and Manoj synthesizes
+   the rounds into one answer.
+5. **Remember.** `handle()` and `plan()` take an optional chat history.
+   The tail of it is attached to every task as context, and when the
+   request itself names no department, routing falls back to scoring the
+   request plus recent history. Current words always win.
 
 The CEO never does the work itself. That is the whole point.
 
@@ -63,24 +70,46 @@ always know when you are looking at stub output versus a real model call.
 
 ## Tools
 
-`botropolis/tools/builtin.py` defines the `Tool` base class and five
-builtin tools: `web_search`, `calculator`, `read_file`, `write_file`,
-`current_time`. Agents declare which tools they may use in their spec.
+`botropolis/tools/builtin.py` defines the `Tool` base class and ten
+builtin tools: `web_search`, `web_fetch`, `shell`, `calculator`,
+`read_file`, `write_file`, `list_dir`, `current_time`, `notes_append`,
+`notes_read`. Agents declare which tools they may use in their spec.
 `web_search` is stub-backed until you wire a real provider; the schema is
 stable so swapping the implementation is a one function change.
 
+`botropolis/tools/gws.py` adds five Google Workspace tools:
+`gmail_search`, `gmail_read`, `gmail_draft`, `calendar_agenda`,
+`calendar_create_event`. They are registered alongside the builtins, so
+agents name them in `toolkit` like any other tool. Deliberate limits: no
+send tool (agents draft, humans send), and calendar events are private
+only. When the Workspace CLI is not connected, the tools report that
+plainly instead of failing.
+
 ## Schemas
 
-`botropolis/core/schemas.py` has the three dataclasses everything passes
-around: `Task` (work to do), `AgentResult` (what one agent produced), and
-`CompanyReport` (the CEO's final answer). All three serialize with
-`to_dict()`, which is what the API server returns.
+`botropolis/core/schemas.py` has the six dataclasses everything passes
+around: `Task` (work to do), `ToolCall` (one tool invocation),
+`AgentResult` (what one agent produced), `CompanyReport` (the CEO's final
+answer), plus `TeamRound` and `TeamReport` for collaboration runs. All
+serialize with `to_dict()`, which is what the API server returns.
 
 ## Server
 
-`botropolis/server.py` is a thin FastAPI layer over the CEO: `POST /ask`
-takes a request string and returns a `CompanyReport` as JSON. The web
+`botropolis/server.py` is a thin FastAPI layer over the CEO. The web
 layer does no reasoning of its own.
+
+- `POST /ask` takes a request string plus an optional chat history and
+  returns a `CompanyReport` as JSON.
+- `POST /team` runs named agents in collaboration rounds and returns a
+  `TeamReport`.
+- `GET /agents/{name}/ask/stream` streams one agent's run as
+  server-sent events: `tool_started`, `tool_finished`, then `result`.
+- `GET /analytics` returns per-agent usage totals: requests,
+  tool calls, which tools each agent used, tokens, latency, errors.
+
+Every request is also appended to a local JSONL usage log
+(`botropolis/data/usage.jsonl`, gitignored) with a tool-call count, so
+the analytics tab works without any external service.
 
 ## Training
 

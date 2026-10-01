@@ -1,0 +1,10 @@
+name: plain_answer_no_tools
+description: An agent with no toolkit answers directly from the reply.
+toolkit: []
+task: Say hello.
+replies:
+  - "FINAL: Hello there."
+expect:
+  output_equals: "Hello there."
+  tool_call_count: 0
+  success: true

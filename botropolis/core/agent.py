@@ -14,8 +14,10 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 
+from botropolis.core.loop import DEFAULT_MAX_STEPS, parse_model_reply, run_tool_loop
 from botropolis.core.models import ModelClient
 from botropolis.core.schemas import AgentResult, Task
+from botropolis.tools import TOOLS
 
 REQUIRED_SPEC_FIELDS = (
     "name",
@@ -45,7 +47,16 @@ class Agent:
         self.specialty: str = spec["specialty"]
         self.model: str = spec["model"]
         self.system_prompt: str = spec["system_prompt"]
-        self.tools: List[str] = list(spec.get("tools", []))
+        # toolkit is the single source of truth for what the agent may
+        # actually call. There is no separate display-only tools list.
+        self.toolkit: List[str] = list(spec.get("toolkit", []))
+        self.max_steps: int = int(spec.get("max_steps", DEFAULT_MAX_STEPS))
+        unknown = [t for t in self.toolkit if t not in TOOLS]
+        if unknown:
+            raise ValueError(
+                f"{self.spec_path}: unknown tools in toolkit: {unknown}. "
+                f"Available: {sorted(TOOLS)}"
+            )
         self.example_tasks: List[str] = list(spec.get("example_tasks", []))
         self.client = client or ModelClient()
 
@@ -60,18 +71,31 @@ class Agent:
             {"role": "user", "content": user_content},
         ]
 
-    def run(self, task: Task | str) -> AgentResult:
+    def run(self, task: Task | str, on_event=None) -> AgentResult:
         """Run one task and return an AgentResult.
 
-        Uses the configured model when credentials exist, otherwise the
-        offline stub. The stub response is always labeled as offline output.
+        Agents with a toolkit run the think-act-observe loop; agents
+        without one do a single model call, as before. Uses the configured
+        model when credentials exist, otherwise the offline stub. The stub
+        response is always labeled as offline output.
+
+        on_event is passed to the tool loop when the agent has a toolkit;
+        see run_tool_loop for the event kinds.
         """
         if isinstance(task, str):
             task = Task(description=task, department=self.department, agent_name=self.name)
         started = time.time()
         try:
+            if self.toolkit:
+                return self._run_with_tools(task, started, on_event=on_event)
             output = self.client.chat(self.model, self.build_messages(task))
+            # Same answer semantics as the tool loop: a FINAL: prefix marks
+            # the answer and is stripped, anything else is the answer as-is.
+            kind, parsed = parse_model_reply(output)
+            if kind == "final":
+                output = parsed
             provider = self.client.provider_for(self.model)
+            usage = getattr(self.client, "last_usage", None) or {}
             return AgentResult(
                 agent_name=self.name,
                 department=self.department,
@@ -79,7 +103,13 @@ class Agent:
                 output=output,
                 success=True,
                 confidence=0.85 if provider != "stub" else 0.5,
-                metadata={"model": self.model, "provider": provider, "stub": provider == "stub"},
+                metadata={
+                    "model": self.model,
+                    "provider": provider,
+                    "stub": provider == "stub",
+                    "tokens_in": int(usage.get("input", 0)),
+                    "tokens_out": int(usage.get("output", 0)),
+                },
                 elapsed_seconds=time.time() - started,
             )
         except Exception as exc:  # never let one agent crash the company
@@ -95,6 +125,30 @@ class Agent:
                 elapsed_seconds=time.time() - started,
             )
 
+    def _run_with_tools(self, task: Task, started: float, on_event=None) -> AgentResult:
+        """Run the think-act-observe loop and wrap it in an AgentResult."""
+        output, tool_calls, usage = run_tool_loop(self, task, on_event=on_event)
+        provider = self.client.provider_for(self.model)
+        return AgentResult(
+            agent_name=self.name,
+            department=self.department,
+            task_id=task.id,
+            output=output,
+            success=True,
+            confidence=0.85 if provider != "stub" else 0.5,
+            metadata={
+                "model": self.model,
+                "provider": provider,
+                "stub": provider == "stub",
+                "tokens_in": int(usage.get("input", 0)),
+                "tokens_out": int(usage.get("output", 0)),
+                "toolkit": self.toolkit,
+                "tool_calls": len(tool_calls),
+            },
+            elapsed_seconds=time.time() - started,
+            tool_calls=tool_calls,
+        )
+
     def describe(self) -> Dict[str, Any]:
         """Return a short public description of this agent."""
         return {
@@ -103,5 +157,7 @@ class Agent:
             "department": self.department,
             "specialty": self.specialty,
             "model": self.model,
-            "tools": self.tools,
+            "tools": self.toolkit,
+            "toolkit": self.toolkit,
+            "example_tasks": self.example_tasks,
         }

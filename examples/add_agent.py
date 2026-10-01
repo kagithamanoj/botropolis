@@ -34,7 +34,7 @@ SPEC = {
     "department": "ops",
     "specialty": "Building practical trip itineraries within a budget",
     "model": "gpt-4o",
-    "tools": ["web_search", "calculator", "current_time"],
+    "toolkit": ["web_search", "calculator", "current_time"],
     "system_prompt": (
         "You are TravelPlanner, the travel specialist at Botropolis. "
         "You build trip plans that respect real constraints: budget, dates, "

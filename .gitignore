@@ -58,3 +58,9 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Usage analytics (local only, never committed)
+botropolis/data/usage.jsonl
+
+# Agent workspace (local only, never committed)
+botropolis/data/workspace/

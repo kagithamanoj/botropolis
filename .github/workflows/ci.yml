@@ -21,7 +21,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pyyaml requests fastapi uvicorn pytest
+          pip install pyyaml requests fastapi uvicorn pytest httpx
 
       - name: Run tests
         run: python -m pytest -q

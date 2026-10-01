@@ -1,0 +1,19 @@
+{
+  "d_model": 256,
+  "n_layer": 6,
+  "n_head": 4,
+  "d_ff": 1024,
+  "dropout": 0.1,
+  "block_size": 128,
+  "vocab_cap": 8000,
+  "min_freq": 2,
+  "lr": 0.0003,
+  "batch_size": 16,
+  "weight_decay": 0.01,
+  "seed": 7,
+  "vocab_size": 1397,
+  "params": 5487104,
+  "epochs": 50,
+  "best_val_loss": 1.6425397033276765,
+  "best_val_ppl": 5.168278753144703
+}

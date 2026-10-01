@@ -104,6 +104,9 @@ class ModelClient:
     def __init__(self, default_model: str = "stub") -> None:
         self.default_model = default_model
         self._registry = load_model_registry()
+        # Tokens reported by the most recent chat() call, as
+        # {"input": int, "output": int}. Zeros for the stub.
+        self.last_usage: Dict[str, int] = {"input": 0, "output": 0}
 
     def resolve_provider(self, model_id: str) -> str:
         """Pick the best provider for a model id, preferring stub offline."""
@@ -122,31 +125,50 @@ class ModelClient:
         """Send chat messages and return the assistant text.
 
         Falls back to the deterministic offline stub when no credentials
-        are configured for the model's provider.
+        are configured for the model's provider. The token counts the
+        provider reported are kept on self.last_usage.
         """
         model_id = model_id or self.default_model
+        self.last_usage = {"input": 0, "output": 0}
         provider = self.resolve_provider(model_id)
         if provider == "stub":
             return stub_chat(model_id, messages)
         try:
             if provider == "openai":
-                return _chat_openai(model_id, messages)
-            if provider == "anthropic":
-                return _chat_anthropic(model_id, messages)
-            if provider == "google":
-                return _chat_google(model_id, messages)
-            if provider == "ollama":
-                return _chat_ollama(model_id, messages)
+                text, usage = _chat_openai(model_id, messages)
+            elif provider == "anthropic":
+                text, usage = _chat_anthropic(model_id, messages)
+            elif provider == "google":
+                text, usage = _chat_google(model_id, messages)
+            elif provider == "ollama":
+                text, usage = _chat_ollama(model_id, messages)
+            else:
+                raise ModelError(f"Unknown provider: {provider}")
         except requests.RequestException as exc:
             raise ModelError(f"{provider} request failed: {exc}") from exc
-        raise ModelError(f"Unknown provider: {provider}")
+        self.last_usage = usage
+        return text
 
     def provider_for(self, model_id: str) -> str:
         """Public helper used by agents to record which provider served a call."""
         return self.resolve_provider(model_id or self.default_model)
 
 
-def _chat_openai(model_id: str, messages: List[Dict[str, str]]) -> str:
+def _norm_usage(raw: Dict, in_keys: tuple, out_keys: tuple) -> Dict[str, int]:
+    """Pull input/output token counts out of a provider's usage payload.
+
+    Providers name these fields differently; take the first present key.
+    Anything unparseable becomes 0. Never raise.
+    """
+    try:
+        inp = next((int(raw[k]) for k in in_keys if k in raw and raw[k] is not None), 0)
+        out = next((int(raw[k]) for k in out_keys if k in raw and raw[k] is not None), 0)
+    except (TypeError, ValueError):
+        inp, out = 0, 0
+    return {"input": inp, "output": out}
+
+
+def _chat_openai(model_id: str, messages: List[Dict[str, str]]) -> tuple:
     """Call the OpenAI chat completions endpoint with requests."""
     key = os.environ["OPENAI_API_KEY"]
     resp = requests.post(
@@ -156,10 +178,14 @@ def _chat_openai(model_id: str, messages: List[Dict[str, str]]) -> str:
         timeout=60,
     )
     resp.raise_for_status()
-    return resp.json()["choices"][0]["message"]["content"]
+    data = resp.json()
+    usage = _norm_usage(
+        data.get("usage", {}), ("prompt_tokens",), ("completion_tokens",)
+    )
+    return data["choices"][0]["message"]["content"], usage
 
 
-def _chat_anthropic(model_id: str, messages: List[Dict[str, str]]) -> str:
+def _chat_anthropic(model_id: str, messages: List[Dict[str, str]]) -> tuple:
     """Call the Anthropic messages endpoint with requests."""
     key = os.environ["ANTHROPIC_API_KEY"]
     system = "\n".join(m["content"] for m in messages if m["role"] == "system")
@@ -182,11 +208,14 @@ def _chat_anthropic(model_id: str, messages: List[Dict[str, str]]) -> str:
         timeout=60,
     )
     resp.raise_for_status()
-    blocks = resp.json().get("content", [])
-    return "".join(b.get("text", "") for b in blocks if b.get("type") == "text")
+    data = resp.json()
+    usage = _norm_usage(data.get("usage", {}), ("input_tokens",), ("output_tokens",))
+    blocks = data.get("content", [])
+    text = "".join(b.get("text", "") for b in blocks if b.get("type") == "text")
+    return text, usage
 
 
-def _chat_google(model_id: str, messages: List[Dict[str, str]]) -> str:
+def _chat_google(model_id: str, messages: List[Dict[str, str]]) -> tuple:
     """Call the Gemini generateContent endpoint with requests."""
     key = os.environ["GOOGLE_API_KEY"]
     system = "\n".join(m["content"] for m in messages if m["role"] == "system")
@@ -207,11 +236,17 @@ def _chat_google(model_id: str, messages: List[Dict[str, str]]) -> str:
     )
     resp.raise_for_status()
     data = resp.json()
+    usage = _norm_usage(
+        data.get("usageMetadata", {}),
+        ("promptTokenCount",),
+        ("candidatesTokenCount",),
+    )
     parts = data["candidates"][0]["content"].get("parts", [])
-    return "".join(p.get("text", "") for p in parts)
+    text = "".join(p.get("text", "") for p in parts)
+    return text, usage
 
 
-def _chat_ollama(model_id: str, messages: List[Dict[str, str]]) -> str:
+def _chat_ollama(model_id: str, messages: List[Dict[str, str]]) -> tuple:
     """Call a local Ollama server with requests."""
     host = os.environ.get("OLLAMA_HOST", _DEFAULT_OLLAMA_HOST).rstrip("/")
     resp = requests.post(
@@ -220,7 +255,9 @@ def _chat_ollama(model_id: str, messages: List[Dict[str, str]]) -> str:
         timeout=120,
     )
     resp.raise_for_status()
-    return resp.json()["message"]["content"]
+    data = resp.json()
+    usage = _norm_usage(data, ("prompt_eval_count",), ("eval_count",))
+    return data["message"]["content"], usage
 
 
 def stub_chat(model_id: str, messages: List[Dict[str, str]]) -> str:

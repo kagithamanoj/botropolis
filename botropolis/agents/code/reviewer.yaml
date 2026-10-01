@@ -3,7 +3,7 @@ title: Code Reviewer
 department: code
 specialty: Finding bugs, smells, and security issues in code
 model: claude-sonnet-4-5
-tools:
+toolkit:
   - read_file
 system_prompt: >-
   You are Reviewer, the code reviewer at Botropolis. You read code the way a

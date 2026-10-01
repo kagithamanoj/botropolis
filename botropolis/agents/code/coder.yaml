@@ -3,10 +3,11 @@ title: Software Engineer
 department: code
 specialty: Writing clean, working code from requirements
 model: claude-sonnet-4-5
-tools:
-  - write_file
+toolkit:
+  - shell
   - read_file
-  - calculator
+  - write_file
+  - list_dir
 system_prompt: >-
   You are Coder, the software engineer at Botropolis. You write code that
   works the first time it is read, not just the first time it runs. You pick

@@ -13,13 +13,13 @@ from typing import Dict, List, Optional, Tuple
 from botropolis.core.agent import Agent
 from botropolis.core.models import ModelClient
 from botropolis.core.registry import AgentRegistry
-from botropolis.core.schemas import AgentResult, CompanyReport, Task
+from botropolis.core.schemas import AgentResult, CompanyReport, Task, TeamReport, TeamRound
 
 # Keywords that suggest a department should be involved. Ordered by
 # department so routing is deterministic.
 DEPARTMENT_KEYWORDS: Dict[str, Tuple[str, ...]] = {
     "research": (
-        "research", "find", "search", "look up", "what is", "what are", "explain",
+        "research", "find", "search", "look up", "explain",
         "report", "news", "trend", "fact", "compare", "survey", "overview",
     ),
     "health": (
@@ -63,20 +63,57 @@ DEPARTMENT_KEYWORDS: Dict[str, Tuple[str, ...]] = {
 # Preferred agent per department for whole-request routing.
 LEAD_AGENT: Dict[str, str] = {
     "research": "scout",
-    "health": "TriageBot",
-    "finance": "MarketAnalyst",
+    "health": "triage",
+    "finance": "markets",
     "code": "coder",
-    "data": "DataEngineer",
+    "data": "pipelines",
     "legal": "paralegal",
     "marketing": "copywriter",
     "ops": "scheduler",
-    "security": "SecAuditor",
-    "support": "SupportAgent",
+    "security": "auditor",
+    "support": "support",
 }
+
+# Hard ceiling on team collaboration rounds. Each round runs every agent,
+# so costs grow with agents * rounds; three is enough for draft, critique,
+# revise without runaway bills.
+MAX_TEAM_ROUNDS = 3
+
+# How much of each teammate's prior output to include in the next prompt.
+# Enough for continuity, not so much that prompts explode.
+PRIOR_OUTPUT_CHARS = 800
+
+# Chat history attached to tasks: last N turns, each capped, so follow-up
+# questions carry context without blowing up the prompt.
+HISTORY_TURNS = 10
+HISTORY_TURN_CHARS = 500
+
+
+def history_context(
+    history: Optional[List[Dict[str, str]]],
+) -> Dict[str, str]:
+    """Pack recent chat turns into task context. Empty dict when none.
+
+    Public so the server can attach history to single-agent tasks too.
+    """
+    if not history:
+        return {}
+    lines = []
+    for turn in history[-HISTORY_TURNS:]:
+        role = turn.get("role", "user")
+        content = (turn.get("content") or "").strip()[:HISTORY_TURN_CHARS]
+        if content:
+            lines.append(f"{role}: {content}")
+    if not lines:
+        return {}
+    return {"chat_history": "\n".join(lines)}
 
 
 class CEO:
     """Orchestrates the company: plans work, assigns agents, reports back."""
+
+    # The CEO has a name. Agents are addressed by first name everywhere.
+    name = "Manoj"
 
     def __init__(
         self,
@@ -98,14 +135,31 @@ class CEO:
                 scores.append((dept, hits))
         return sorted(scores, key=lambda item: (-item[1], item[0]))
 
-    def plan(self, request: str) -> List[Task]:
-        """Decompose a request into one task per relevant department."""
+    def plan(
+        self, request: str, history: Optional[List[Dict[str, str]]] = None
+    ) -> List[Task]:
+        """Decompose a request into one task per relevant department.
+
+        history is a list of {"role": "user"|"assistant", "content": str}
+        turns; the tail of it is attached to every task as context so
+        agents can resolve follow-ups like "what about the second one?".
+        Routing also sees the recent history, but only when the request
+        itself names no department: the current words always win, and
+        history rescues keyword-free follow-ups ("and how long does it
+        last?").
+        """
         scored = self.score_departments(request)
+        if not scored and history:
+            hist_text = " ".join(
+                (t.get("content") or "") for t in history[-HISTORY_TURNS:]
+            )
+            scored = self.score_departments(f"{request} {hist_text}")
         departments = [dept for dept, _ in scored[:3]]
         if not departments:
             departments = ["research"] if "research" in self.registry.departments else [
                 self.registry.departments[0]
             ]
+        context = history_context(history)
         tasks = []
         for dept in departments:
             focus = f" (focus: {request[:80]})" if len(departments) > 1 else ""
@@ -113,6 +167,7 @@ class CEO:
                 Task(
                     description=f"{request}{focus}",
                     department=dept,
+                    context=dict(context),
                 )
             )
         return tasks
@@ -132,10 +187,12 @@ class CEO:
                 pass
         return agents[0]
 
-    def handle(self, request: str) -> CompanyReport:
+    def handle(
+        self, request: str, history: Optional[List[Dict[str, str]]] = None
+    ) -> CompanyReport:
         """Run the full company workflow for one user request."""
         started = time.time()
-        tasks = self.plan(request)
+        tasks = self.plan(request, history=history)
         results: List[AgentResult] = []
         departments: List[str] = []
         for task in tasks:
@@ -153,6 +210,99 @@ class CEO:
             summary=summary,
             elapsed_seconds=time.time() - started,
         )
+
+    def team(self, request: str, agent_names: List[str], rounds: int = 2) -> TeamReport:
+        """Run named agents as a team in collaboration rounds.
+
+        Each agent's prompt includes the original request plus the outputs
+        of every teammate that ran before it, so later turns can build on,
+        critique, or revise earlier work. Typical shape: Coder drafts,
+        Reviewer critiques, Coder revises.
+
+        Rounds are capped at MAX_TEAM_ROUNDS. Unknown agent names raise
+        KeyError; an empty team raises ValueError.
+        """
+        if not agent_names:
+            raise ValueError("team() needs at least one agent")
+        # Drop repeats while keeping the listed order. Running the same
+        # agent twice in one round adds cost, not insight.
+        agent_names = list(dict.fromkeys(agent_names))
+        agents: List[Agent] = []
+        for name in agent_names:
+            try:
+                agents.append(self.registry.get(name))
+            except KeyError:
+                raise KeyError(f"Unknown agent: {name}")
+        rounds = max(1, min(int(rounds), MAX_TEAM_ROUNDS))
+
+        started = time.time()
+        team_rounds: List[TeamRound] = []
+        prior: List[Tuple[int, str, str]] = []  # (round_number, agent_name, output)
+        for round_num in range(1, rounds + 1):
+            for agent in agents:
+                task = Task(
+                    description=f"Team request (round {round_num} of {rounds}): {request}",
+                    department=agent.department,
+                    agent_name=agent.name,
+                    context=self._team_context(prior),
+                )
+                result = agent.run(task)
+                team_rounds.append(
+                    TeamRound(
+                        round_number=round_num,
+                        agent_name=agent.name,
+                        department=agent.department,
+                        result=result,
+                    )
+                )
+                prior.append((round_num, agent.name, result.output))
+
+        return TeamReport(
+            request=request,
+            agents=[a.name for a in agents],
+            rounds=team_rounds,
+            synthesis=self._synthesize_team(request, agents, team_rounds),
+            elapsed_seconds=time.time() - started,
+        )
+
+    def _team_context(self, prior: List[Tuple[int, str, str]]) -> Dict[str, str]:
+        """Pack earlier teammates' outputs into task context."""
+        if not prior:
+            return {}
+        chunks = []
+        for round_num, agent_name, output in prior:
+            snippet = output.strip()[:PRIOR_OUTPUT_CHARS]
+            chunks.append(f"[round {round_num} - {agent_name}]\n{snippet}")
+        return {"teammates_so_far": "\n\n".join(chunks)}
+
+    def _synthesize_team(
+        self, request: str, agents: List[Agent], team_rounds: List[TeamRound]
+    ) -> str:
+        """Summarize the final state of a team session."""
+        num_rounds = max(r.round_number for r in team_rounds)
+        lines = [
+            f"Team request: {request}",
+            f"Team: {', '.join(a.name for a in agents)} "
+            f"({len(team_rounds)} runs over "
+            f"{num_rounds} round{'s' if num_rounds != 1 else ''})",
+            "",
+            "Final state per agent:",
+        ]
+        final: Dict[str, TeamRound] = {}
+        for team_round in team_rounds:
+            final[team_round.agent_name] = team_round
+        for name, team_round in final.items():
+            status = "done" if team_round.result.success else "failed"
+            output = team_round.result.output.strip()
+            first_line = output.splitlines()[0] if output else "(no output)"
+            lines.append(f"[{name}] {status}: {first_line}")
+        if team_rounds and all(r.result.metadata.get("stub") for r in team_rounds):
+            lines.append("")
+            lines.append(
+                "All runs used the offline stub: reasoning shape only, "
+                "no live model calls."
+            )
+        return "\n".join(lines)
 
     def _synthesize(self, request: str, results: List[AgentResult]) -> str:
         """Combine agent outputs into an executive summary."""

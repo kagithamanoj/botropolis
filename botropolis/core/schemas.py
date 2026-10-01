@@ -28,6 +28,21 @@ class Task:
 
 
 @dataclass
+class ToolCall:
+    """One tool invocation made by an agent during its run."""
+
+    tool: str
+    args: Dict[str, Any] = field(default_factory=dict)
+    success: bool = True
+    result_preview: str = ""
+    elapsed_ms: float = 0.0
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Return a JSON-serializable dict."""
+        return asdict(self)
+
+
+@dataclass
 class AgentResult:
     """The outcome of one agent running one task."""
 
@@ -40,6 +55,7 @@ class AgentResult:
     error: Optional[str] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
     elapsed_seconds: float = 0.0
+    tool_calls: List[ToolCall] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         """Return a JSON-serializable dict."""
@@ -66,3 +82,39 @@ class CompanyReport:
     def successful(self) -> bool:
         """True when every agent result succeeded."""
         return bool(self.results) and all(r.success for r in self.results)
+
+
+@dataclass
+class TeamRound:
+    """One agent's turn inside a team session."""
+
+    round_number: int
+    agent_name: str
+    department: str
+    result: AgentResult
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Return a JSON-serializable dict."""
+        return asdict(self)
+
+
+@dataclass
+class TeamReport:
+    """The CEO's report for one team collaboration session."""
+
+    request: str
+    agents: List[str] = field(default_factory=list)
+    rounds: List[TeamRound] = field(default_factory=list)
+    synthesis: str = ""
+    elapsed_seconds: float = 0.0
+    created_at: float = field(default_factory=time.time)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Return a JSON-serializable dict."""
+        data = asdict(self)
+        data["rounds"] = [r.to_dict() for r in self.rounds]
+        return data
+
+    def successful(self) -> bool:
+        """True when every team round succeeded."""
+        return bool(self.rounds) and all(r.result.success for r in self.rounds)

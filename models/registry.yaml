@@ -17,12 +17,12 @@ base_models:
   - id: claude-sonnet-4-5
     provider: anthropic
     context_window: 200000
-    notes: Strong reasoning and long context. Used by Analyst, Reviewer, SecAuditor.
+    notes: Strong reasoning and long context. Used by Analyst, Reviewer, Auditor.
 
   - id: gemini-2.5-pro
     provider: google
     context_window: 1000000
-    notes: Huge context window. Good fit for MedResearcher and MLEngineer reading long docs.
+    notes: Huge context window. Good fit for MedResearch and Trainer reading long docs.
 
   - id: llama-3.3-70b
     provider: ollama
@@ -76,3 +76,18 @@ fine_tunes:
     # gguf_path: "./checkpoints/botropolis-coder-7b-q4_k_m.gguf"
     # ollama_tag: "botropolis-coder-7b"
     notes: Placeholder for a future code specialist fine-tune. Dataset not collected yet.
+
+  - id: botropolis-scout-tiny
+    status: trained
+    base_model: null
+    trained_for: Scout (research department, web research specialist)
+    dataset: training/datasets/scout_demo.jsonl
+    config: training/train_scout_tiny.py
+    local_path: "./models/weights/botropolis-scout-tiny"
+    card: "models/cards/botropolis-scout-tiny.md"
+    params: 5487104
+    eval:
+      val_perplexity: 5.17
+      val_loss: 1.6425
+      note: "Val set shares answer templates with train; ppl reflects format learning, not general quality."
+    notes: Demo-scale decoder-only transformer trained from scratch on CPU (50 epochs, 300 synthetic examples). Pipeline proof of concept. Fluent format, unreliable facts; see the model card for honest samples. Not for deployment.

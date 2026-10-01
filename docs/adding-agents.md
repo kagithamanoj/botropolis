@@ -19,9 +19,9 @@ title: Travel Planning Specialist
 department: ops                # must match the directory name
 specialty: Building practical trip itineraries within a budget
 model: gpt-4o                  # a model id from models/registry.yaml
-tools:                         # subset of the builtin tools
-  - web_search
-  - calculator
+toolkit:                       # tools the agent may actually call;
+  - web_search                 # empty or omitted means one model call,
+  - calculator                 # no tool loop
   - current_time
 system_prompt: >-
   You are TravelPlanner, ...

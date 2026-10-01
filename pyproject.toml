@@ -18,8 +18,11 @@ dependencies = [
     "uvicorn",
 ]
 
+[project.scripts]
+botropolis = "botropolis.cli:main"
+
 [project.optional-dependencies]
-dev = ["pytest"]
+dev = ["pytest", "httpx"]
 
 [project.urls]
 Homepage = "https://github.com/kagithamanoj/botropolis"
