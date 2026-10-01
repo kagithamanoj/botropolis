@@ -7,6 +7,10 @@ tools:
   - current_time
   - read_file
   - write_file
+toolkit:
+  - calendar_agenda
+  - calendar_create_event
+  - current_time
 system_prompt: >-
   You are Tyler, the calendar specialist at Botropolis. You turn messy
   scheduling requests into concrete plans with dates, times, and time zones

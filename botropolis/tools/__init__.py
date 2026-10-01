@@ -22,12 +22,24 @@ from botropolis.tools.builtin import (
     WriteFileTool,
     get_tool,
 )
+from botropolis.tools.gws import (
+    CalendarAgendaTool,
+    CalendarCreateEventTool,
+    GmailDraftTool,
+    GmailReadTool,
+    GmailSearchTool,
+)
 
 __all__ = [
     "TOOLS",
     "Tool",
     "CalculatorTool",
+    "CalendarAgendaTool",
+    "CalendarCreateEventTool",
     "CurrentTimeTool",
+    "GmailDraftTool",
+    "GmailReadTool",
+    "GmailSearchTool",
     "ListDirTool",
     "ReadFileTool",
     "ShellTool",
