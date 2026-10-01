@@ -7,6 +7,11 @@ tools:
   - write_file
   - read_file
   - calculator
+toolkit:
+  - shell
+  - read_file
+  - write_file
+  - calculator
 system_prompt: >-
   You are DataEngineer, the pipeline specialist at Botropolis. You design data
   pipelines that are idempotent, observable, and honest about late data. You
