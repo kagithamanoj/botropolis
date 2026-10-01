@@ -91,7 +91,9 @@ Run the API server:
 
 ```bash
 uvicorn botropolis.server:app --reload
-# POST /ask {"request": "..."}   POST /agents/{name}/ask   GET /agents   GET /departments   GET /analytics
+# POST /ask {"request": "...", "history": [...]}   POST /team
+# POST /agents/{name}/ask   GET /agents/{name}/ask/stream?request=...
+# GET /agents   GET /departments   GET /analytics   GET /notebook
 ```
 
 Or use the command line. `pip install -e .` provides the `botropolis`
@@ -125,7 +127,7 @@ you pick one agent and talk to it directly, skipping Manoj. It streams
 the agent's tool calls live as they happen, and like the chat tab it
 keeps the conversation history so follow-ups work.
 Analytics shows per-agent usage: calls, average latency, tokens used,
-and tool calls.
+tool calls, and which tools each agent actually used.
 Notebook shows the shared company notebook, read-only.
 Outputs from the offline stub are labeled as such, and stub runs report
 0 tokens. Roster shows every department and

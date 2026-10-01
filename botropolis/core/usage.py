@@ -12,9 +12,9 @@ from __future__ import annotations
 
 import json
 import time
-from collections import defaultdict
+from collections import Counter, defaultdict
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 LOG_PATH = Path(__file__).resolve().parent.parent / "data" / "usage.jsonl"
 
@@ -29,6 +29,7 @@ def log_invocation(
     tokens_out: int = 0,
     success: bool = True,
     tool_calls: int = 0,
+    tool_names: List[str] = None,
 ) -> Dict[str, Any]:
     """Append one agent invocation to the usage log.
 
@@ -45,6 +46,7 @@ def log_invocation(
         "tokens_out": int(tokens_out),
         "success": bool(success),
         "tool_calls": int(tool_calls),
+        "tools": [str(t) for t in (tool_names or [])],
     }
     try:
         LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -74,6 +76,7 @@ def get_summary() -> Dict[str, Any]:
             "tokens_out": 0,
             "stub_calls": 0,
             "tool_calls": 0,
+            "tools": Counter(),
             "models": set(),
         }
     )
@@ -101,6 +104,8 @@ def get_summary() -> Dict[str, Any]:
                     stub_calls += 1
                 entry["tool_calls"] += int(row.get("tool_calls", 0) or 0)
                 tool_calls_total += int(row.get("tool_calls", 0) or 0)
+                for tool_name in row.get("tools", []) or []:
+                    entry["tools"][str(tool_name)] += 1
                 if row.get("model"):
                     entry["models"].add(row["model"])
                 calls += 1
@@ -119,6 +124,7 @@ def get_summary() -> Dict[str, Any]:
             "tokens_total": entry["tokens_in"] + entry["tokens_out"],
             "stub_calls": entry["stub_calls"],
             "tool_calls": entry["tool_calls"],
+            "tools": dict(entry["tools"].most_common(5)),
             "models": sorted(entry["models"]),
         }
     return {

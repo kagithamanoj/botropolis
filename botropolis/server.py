@@ -120,6 +120,7 @@ def _record_usage(result: AgentResult) -> None:
         tokens_out=int(meta.get("tokens_out", 0) or 0),
         success=result.success,
         tool_calls=len(result.tool_calls),
+        tool_names=[tc.tool for tc in result.tool_calls],
     )
 
 

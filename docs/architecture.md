@@ -105,7 +105,7 @@ layer does no reasoning of its own.
 - `GET /agents/{name}/ask/stream` streams one agent's run as
   server-sent events: `tool_started`, `tool_finished`, then `result`.
 - `GET /analytics` returns per-agent usage totals: requests,
-  tool calls, tokens, latency, errors.
+  tool calls, which tools each agent used, tokens, latency, errors.
 
 Every request is also appended to a local JSONL usage log
 (`botropolis/data/usage.jsonl`, gitignored) with a tool-call count, so

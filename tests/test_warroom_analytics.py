@@ -53,14 +53,16 @@ def test_usage_summary_aggregates(monkeypatch, tmp_path):
     monkeypatch.setattr(usage, "LOG_PATH", tmp_path / "usage.jsonl")
     usage.log_invocation("Ethan", "research", "stub", "stub", 12.5, 0, 0, True)
     usage.log_invocation("Ethan", "research", "stub", "stub", 7.5, 0, 0, True,
-                         tool_calls=3)
+                         tool_calls=3, tool_names=["web_search", "calculator", "web_search"])
     usage.log_invocation("Liam", "code", "gpt-4o", "openai", 100.0, 50, 20, True)
     summary = usage.get_summary()
     assert summary["agents"]["Ethan"]["calls"] == 2
     assert summary["agents"]["Ethan"]["avg_latency_ms"] == 10.0
     assert summary["agents"]["Ethan"]["tool_calls"] == 3
+    assert summary["agents"]["Ethan"]["tools"] == {"web_search": 2, "calculator": 1}
     assert summary["agents"]["Liam"]["tokens_total"] == 70
     assert summary["agents"]["Liam"]["tool_calls"] == 0
+    assert summary["agents"]["Liam"]["tools"] == {}
     assert summary["totals"]["calls"] == 3
     assert summary["totals"]["stub_calls"] == 2
     assert summary["totals"]["tool_calls"] == 3
@@ -80,3 +82,40 @@ def test_analytics_endpoint(monkeypatch, tmp_path):
     body = resp.json()
     assert "agents" in body
     assert "totals" in body
+
+
+def test_usage_summary_tolerates_rows_without_tools(monkeypatch, tmp_path):
+    import json
+
+    log = tmp_path / "usage.jsonl"
+    monkeypatch.setattr(usage, "LOG_PATH", log)
+    old_row = {
+        "ts": 123.0, "agent": "Ethan", "department": "research",
+        "model": "stub", "provider": "stub", "latency_ms": 5.0,
+        "tokens_in": 0, "tokens_out": 0, "success": True,
+    }
+    log.write_text(json.dumps(old_row) + "\n")
+    summary = usage.get_summary()
+    assert summary["agents"]["Ethan"]["calls"] == 1
+    assert summary["agents"]["Ethan"]["tools"] == {}
+    assert summary["agents"]["Ethan"]["tool_calls"] == 0
+
+
+def test_record_usage_logs_tool_names(monkeypatch, tmp_path):
+    from botropolis.core.schemas import AgentResult, ToolCall
+    from botropolis.server import _record_usage
+
+    monkeypatch.setattr(usage, "LOG_PATH", tmp_path / "usage.jsonl")
+    result = AgentResult(
+        agent_name="Liam",
+        department="code",
+        task_id="t1",
+        output="done",
+        tool_calls=[
+            ToolCall(tool="shell", args={}),
+            ToolCall(tool="calculator", args={}),
+        ],
+    )
+    _record_usage(result)
+    summary = usage.get_summary()
+    assert summary["agents"]["Liam"]["tools"] == {"shell": 1, "calculator": 1}
