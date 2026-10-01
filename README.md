@@ -185,7 +185,11 @@ result and shown in the web UI agent cards.
 Available tools: `web_search` (DuckDuckGo, no key needed), `web_fetch`
 (page text extraction), `shell`, `read_file`, `write_file`, `list_dir`,
 `calculator`, `current_time`, `gmail_search`, `gmail_read`, `gmail_draft`,
-`calendar_agenda`, `calendar_create_event`.
+`calendar_agenda`, `calendar_create_event`, `notes_append`, `notes_read`.
+
+`notes_append` and `notes_read` share one company notebook
+(`botropolis/data/workspace/notes.md`, gitignored): agents can remember
+durable facts across runs, and humans can read the same file.
 
 Google Workspace tools shell out to `hatch_gws_cli` and degrade
 gracefully when Gmail or Calendar is not connected. Two deliberate
