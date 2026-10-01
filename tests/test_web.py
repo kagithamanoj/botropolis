@@ -27,6 +27,16 @@ def test_static_css_served():
     assert "topbar" in resp.text
 
 
+def test_index_has_team_tab():
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert 'id="tab-team"' in resp.text
+    assert 'id="view-team"' in resp.text
+    assert 'id="team-form"' in resp.text
+    assert 'id="team-agents"' in resp.text
+    assert 'id="team-rounds"' in resp.text
+
+
 def test_api_routes_still_work():
     assert client.get("/health").status_code == 200
     assert client.get("/agents").status_code == 200

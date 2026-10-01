@@ -104,8 +104,10 @@ uvicorn botropolis.server:app --reload
 # open http://localhost:8000
 ```
 
-Three tabs. Chat talks to Manoj: you ask, he routes to departments, and
-you get the summary plus one card per agent that did work. War room lets
+Five tabs. Chat talks to Manoj: you ask, he routes to departments, and
+you get the summary plus one card per agent that did work. Teaming lets
+you pick any agents, set the rounds, and watch them collaborate on a task.
+War room lets
 you pick one agent and talk to it directly, skipping Manoj.
 Analytics shows per-agent usage: calls, average latency, and tokens used.
 Outputs from the offline stub are labeled as such, and stub runs report

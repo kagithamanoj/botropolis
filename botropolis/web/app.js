@@ -11,10 +11,12 @@
   var sendBtn = document.getElementById("ask-send");
   var statusEl = document.getElementById("status");
   var tabChat = document.getElementById("tab-chat");
+  var tabTeam = document.getElementById("tab-team");
   var tabWarroom = document.getElementById("tab-warroom");
   var tabAnalytics = document.getElementById("tab-analytics");
   var tabRoster = document.getElementById("tab-roster");
   var viewChat = document.getElementById("view-chat");
+  var viewTeam = document.getElementById("view-team");
   var viewWarroom = document.getElementById("view-warroom");
   var viewAnalytics = document.getElementById("view-analytics");
   var viewRoster = document.getElementById("view-roster");
@@ -28,6 +30,12 @@
   var warroomSend = document.getElementById("warroom-send");
   var analyticsTable = document.getElementById("analytics-table");
   var analyticsRefresh = document.getElementById("analytics-refresh");
+  var teamAgents = document.getElementById("team-agents");
+  var teamRounds = document.getElementById("team-rounds");
+  var teamResults = document.getElementById("team-results");
+  var teamForm = document.getElementById("team-form");
+  var teamInput = document.getElementById("team-input");
+  var teamSend = document.getElementById("team-send");
 
   /* Escape user and model text before injecting into the DOM. */
   function esc(text) {
@@ -45,6 +53,7 @@
 
   var TABS = {
     chat: { tab: tabChat, view: viewChat },
+    team: { tab: tabTeam, view: viewTeam },
     warroom: { tab: tabWarroom, view: viewWarroom },
     analytics: { tab: tabAnalytics, view: viewAnalytics },
     roster: { tab: tabRoster, view: viewRoster }
@@ -58,6 +67,9 @@
     });
     if (which === "roster" && !rosterList.dataset.loaded) {
       loadDepartments();
+    }
+    if (which === "team" && !teamAgents.dataset.loaded) {
+      loadTeamAgents();
     }
     if (which === "warroom" && !warroomAgent.dataset.loaded) {
       loadWarroomAgents();
@@ -193,6 +205,129 @@
       .finally(function () {
         sendBtn.disabled = false;
         inputEl.focus();
+      });
+  });
+
+  /* ---- Teaming: run a team of agents in collaboration rounds ---- */
+
+  function loadTeamAgents() {
+    fetch("/agents")
+      .then(function (resp) { return resp.json(); })
+      .then(function (data) {
+        teamAgents.dataset.loaded = "1";
+        teamAgents.innerHTML = "";
+        data.agents.forEach(function (a) {
+          var label = document.createElement("label");
+          label.className = "team-agent";
+          var cb = document.createElement("input");
+          cb.type = "checkbox";
+          cb.value = a.name;
+          label.appendChild(cb);
+          var span = document.createElement("span");
+          span.textContent = a.name + " - " + a.title;
+          label.appendChild(span);
+          teamAgents.appendChild(label);
+        });
+      })
+      .catch(function () {
+        teamAgents.innerHTML = "<p>Could not load agents.</p>";
+      });
+  }
+
+  function addTeamNote(text) {
+    var wrap = document.createElement("div");
+    wrap.className = "msg company";
+    wrap.innerHTML = '<div class="report"><div class="ceo-label">Teaming</div>' +
+      '<p class="summary">' + esc(text) + "</p></div>";
+    teamResults.appendChild(wrap);
+    scrollDown();
+  }
+
+  function addTeamTyping() {
+    var wrap = document.createElement("div");
+    wrap.className = "msg company";
+    wrap.id = "team-typing";
+    wrap.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
+    teamResults.appendChild(wrap);
+    scrollDown();
+  }
+
+  function removeTeamTyping() {
+    var row = document.getElementById("team-typing");
+    if (row) row.remove();
+  }
+
+  function renderTeamReport(report) {
+    var wrap = document.createElement("div");
+    wrap.className = "msg company";
+
+    var html = '<div class="report">';
+    html += '<div class="ceo-label">Team session: ' + esc((report.agents || []).join(", ")) + "</div>";
+
+    var byRound = {};
+    (report.rounds || []).forEach(function (rd) {
+      var key = rd.round_number;
+      if (!byRound[key]) byRound[key] = [];
+      byRound[key].push(rd);
+    });
+    Object.keys(byRound).sort(function (a, b) { return a - b; }).forEach(function (n) {
+      html += '<div class="team-round"><div class="round-label">Round ' + esc(n) + "</div>";
+      byRound[n].forEach(function (rd) {
+        html += agentCardHtml(rd.result);
+      });
+      html += "</div>";
+    });
+
+    html += '<div class="ceo-label">Manoj\'s synthesis</div>';
+    html += '<p class="summary">' + esc(report.synthesis || "Done.") + "</p>";
+    html += "</div>";
+    wrap.innerHTML = html;
+    teamResults.appendChild(wrap);
+    scrollDown();
+  }
+
+  teamForm.addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var text = teamInput.value.trim();
+    var agents = [];
+    teamAgents.querySelectorAll("input[type=checkbox]").forEach(function (cb) {
+      if (cb.checked) agents.push(cb.value);
+    });
+    var rounds = parseInt(teamRounds.value, 10) || 2;
+    if (!text || !agents.length) {
+      addTeamNote("Pick at least one agent and describe the task first.");
+      return;
+    }
+    teamInput.value = "";
+    teamSend.disabled = true;
+    addTeamNote("Running " + agents.join(", ") + " for " + rounds +
+      (rounds === 1 ? " round." : " rounds."));
+    addTeamTyping();
+
+    fetch("/team", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ request: text, agents: agents, rounds: rounds })
+    })
+      .then(function (resp) {
+        if (!resp.ok) {
+          return resp.json().then(function (body) {
+            throw new Error(body.detail || ("server returned " + resp.status));
+          });
+        }
+        return resp.json();
+      })
+      .then(function (report) {
+        removeTeamTyping();
+        renderTeamReport(report);
+      })
+      .catch(function (err) {
+        removeTeamTyping();
+        addTeamNote("Something went wrong: " + err.message);
+      })
+      .finally(function () {
+        teamSend.disabled = false;
+        teamInput.focus();
       });
   });
 

@@ -314,6 +314,75 @@ main { flex: 1; padding: 18px; }
   font-size: 14px;
 }
 
+/* Teaming */
+
+.team-builder {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+.team-label {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.team-agents {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 4px;
+  max-height: 230px;
+  overflow-y: auto;
+  margin-bottom: 12px;
+}
+
+.team-agent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.team-agent:hover { background: var(--panel-2); }
+
+.team-agent input { accent-color: var(--accent); }
+
+.team-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.team-row label { color: var(--muted); font-size: 14px; }
+
+.team-row select {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 8px 10px;
+  font-size: 14px;
+}
+
+.team-round { margin: 14px 0; }
+
+.round-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
 /* Analytics */
 
 .analytics-head {
