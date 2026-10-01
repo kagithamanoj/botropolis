@@ -102,6 +102,24 @@ Every agent invocation, through the CEO or the war room, is appended to
 `botropolis/data/usage.jsonl` (gitignored). `GET /analytics` returns the
 per-agent totals from that log.
 
+## Teaming
+
+One agent working alone is fine. A team is better. `POST /team` runs named
+agents in collaboration rounds: each agent's prompt includes the original
+request plus everything its teammates produced before it, so the team can
+draft, critique, and revise. The CEO then writes a short synthesis of the
+final state.
+
+```bash
+curl -X POST http://localhost:8000/team \
+  -H "Content-Type: application/json" \
+  -d '{"request": "Write a Python retry helper", "agents": ["Coder", "Reviewer"], "rounds": 2}'
+```
+
+Rounds are capped at 3. Unknown agent names return 404. Team runs are
+logged to the usage log like any other invocation, so they show up in
+`GET /analytics` too.
+
 ## Models
 
 Every agent spec names a model. `models/registry.yaml` is the central
@@ -145,7 +163,7 @@ botropolis/
   core/        agent base class, registry, CEO orchestrator, model client
   agents/      one folder per department, one YAML spec per agent
   tools/       shared tools agents can call
-  server.py    FastAPI: POST /ask, POST /agents/{name}/ask, GET /agents, GET /departments, GET /analytics
+  server.py    FastAPI: POST /ask, POST /agents/{name}/ask, POST /team, GET /agents, GET /departments, GET /analytics
 models/        registry.yaml and model cards
 training/      configs, datasets, train.py, evaluate.py
 examples/      demo.py, add_agent.py
