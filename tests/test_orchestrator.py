@@ -75,3 +75,22 @@ def test_handle_accepts_history(ceo):
     history = [{"role": "user", "content": "Remind me what we discussed."}]
     report = ceo.handle("Summarize it", history=history)
     assert report.results
+
+
+def test_followup_routes_with_history(ceo):
+    history = [
+        {"role": "user", "content": "What are the symptoms of the flu?"},
+        {"role": "assistant", "content": "Fever, cough, fatigue."},
+    ]
+    tasks = ceo.plan("And how long does it usually last?", history=history)
+    assert tasks
+    assert all(t.department == "health" for t in tasks)
+
+
+def test_new_topic_overrides_history(ceo):
+    history = [
+        {"role": "user", "content": "What are the symptoms of the flu?"},
+    ]
+    tasks = ceo.plan("Write a python script to parse logs", history=history)
+    assert tasks
+    assert tasks[0].department == "code"

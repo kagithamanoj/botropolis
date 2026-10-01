@@ -19,7 +19,7 @@ from botropolis.core.schemas import AgentResult, CompanyReport, Task, TeamReport
 # department so routing is deterministic.
 DEPARTMENT_KEYWORDS: Dict[str, Tuple[str, ...]] = {
     "research": (
-        "research", "find", "search", "look up", "what is", "what are", "explain",
+        "research", "find", "search", "look up", "explain",
         "report", "news", "trend", "fact", "compare", "survey", "overview",
     ),
     "health": (
@@ -140,8 +140,17 @@ class CEO:
         history is a list of {"role": "user"|"assistant", "content": str}
         turns; the tail of it is attached to every task as context so
         agents can resolve follow-ups like "what about the second one?".
+        Routing also sees the recent history, but only when the request
+        itself names no department: the current words always win, and
+        history rescues keyword-free follow-ups ("and how long does it
+        last?").
         """
         scored = self.score_departments(request)
+        if not scored and history:
+            hist_text = " ".join(
+                (t.get("content") or "") for t in history[-HISTORY_TURNS:]
+            )
+            scored = self.score_departments(f"{request} {hist_text}")
         departments = [dept for dept, _ in scored[:3]]
         if not departments:
             departments = ["research"] if "research" in self.registry.departments else [
