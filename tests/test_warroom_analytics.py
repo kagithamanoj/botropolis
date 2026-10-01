@@ -52,14 +52,18 @@ def test_ask_logs_usage(monkeypatch, tmp_path):
 def test_usage_summary_aggregates(monkeypatch, tmp_path):
     monkeypatch.setattr(usage, "LOG_PATH", tmp_path / "usage.jsonl")
     usage.log_invocation("Ethan", "research", "stub", "stub", 12.5, 0, 0, True)
-    usage.log_invocation("Ethan", "research", "stub", "stub", 7.5, 0, 0, True)
+    usage.log_invocation("Ethan", "research", "stub", "stub", 7.5, 0, 0, True,
+                         tool_calls=3)
     usage.log_invocation("Liam", "code", "gpt-4o", "openai", 100.0, 50, 20, True)
     summary = usage.get_summary()
     assert summary["agents"]["Ethan"]["calls"] == 2
     assert summary["agents"]["Ethan"]["avg_latency_ms"] == 10.0
+    assert summary["agents"]["Ethan"]["tool_calls"] == 3
     assert summary["agents"]["Liam"]["tokens_total"] == 70
+    assert summary["agents"]["Liam"]["tool_calls"] == 0
     assert summary["totals"]["calls"] == 3
     assert summary["totals"]["stub_calls"] == 2
+    assert summary["totals"]["tool_calls"] == 3
 
 
 def test_usage_summary_empty_log(monkeypatch, tmp_path):
