@@ -16,10 +16,10 @@ maps to the code.
         |           |            |            |           |
    research      health      finance       code  ... (10 total)
    /  |  \      /  |  \
- Scout Analyst FactChecker ...
+ Aarav Meera Dev ...
 ```
 
-## CEO (orchestrator)
+## Manoj, the CEO (orchestrator)
 
 `botropolis/core/orchestrator.py` holds the `CEO` class. It does three things:
 

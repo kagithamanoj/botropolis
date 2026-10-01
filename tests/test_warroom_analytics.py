@@ -18,10 +18,10 @@ def test_stub_reports_zero_token_usage():
 
 def test_war_room_ask_returns_agent_result(monkeypatch, tmp_path):
     monkeypatch.setattr(usage, "LOG_PATH", tmp_path / "usage.jsonl")
-    resp = client.post("/agents/Scout/ask", json={"request": "what is TCP?"})
+    resp = client.post("/agents/Aarav/ask", json={"request": "what is TCP?"})
     assert resp.status_code == 200
     body = resp.json()
-    assert body["agent_name"] == "Scout"
+    assert body["agent_name"] == "Aarav"
     assert body["success"] is True
     assert body["output"]
     assert body["metadata"]["tokens_in"] == 0
@@ -35,9 +35,9 @@ def test_war_room_ask_unknown_agent_404():
 
 def test_war_room_ask_logs_usage(monkeypatch, tmp_path):
     monkeypatch.setattr(usage, "LOG_PATH", tmp_path / "usage.jsonl")
-    client.post("/agents/Coder/ask", json={"request": "write a loop"})
+    client.post("/agents/Arjun/ask", json={"request": "write a loop"})
     summary = usage.get_summary()
-    assert summary["agents"]["Coder"]["calls"] == 1
+    assert summary["agents"]["Arjun"]["calls"] == 1
     assert summary["totals"]["stub_calls"] == 1
 
 
@@ -51,13 +51,13 @@ def test_ask_logs_usage(monkeypatch, tmp_path):
 
 def test_usage_summary_aggregates(monkeypatch, tmp_path):
     monkeypatch.setattr(usage, "LOG_PATH", tmp_path / "usage.jsonl")
-    usage.log_invocation("Scout", "research", "stub", "stub", 12.5, 0, 0, True)
-    usage.log_invocation("Scout", "research", "stub", "stub", 7.5, 0, 0, True)
-    usage.log_invocation("Coder", "code", "gpt-4o", "openai", 100.0, 50, 20, True)
+    usage.log_invocation("Aarav", "research", "stub", "stub", 12.5, 0, 0, True)
+    usage.log_invocation("Aarav", "research", "stub", "stub", 7.5, 0, 0, True)
+    usage.log_invocation("Arjun", "code", "gpt-4o", "openai", 100.0, 50, 20, True)
     summary = usage.get_summary()
-    assert summary["agents"]["Scout"]["calls"] == 2
-    assert summary["agents"]["Scout"]["avg_latency_ms"] == 10.0
-    assert summary["agents"]["Coder"]["tokens_total"] == 70
+    assert summary["agents"]["Aarav"]["calls"] == 2
+    assert summary["agents"]["Aarav"]["avg_latency_ms"] == 10.0
+    assert summary["agents"]["Arjun"]["tokens_total"] == 70
     assert summary["totals"]["calls"] == 3
     assert summary["totals"]["stub_calls"] == 2
 

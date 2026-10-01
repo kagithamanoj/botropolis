@@ -10,7 +10,7 @@ Format is JSONL, one chat per line, OpenAI style messages:
 
 ```json
 {"messages": [
-  {"role": "system", "content": "You are Scout, ..."},
+  {"role": "system", "content": "You are Aarav, ..."},
   {"role": "user", "content": "..."},
   {"role": "assistant", "content": "..."}
 ], "eval_keywords": ["..."]}

@@ -62,16 +62,16 @@ DEPARTMENT_KEYWORDS: Dict[str, Tuple[str, ...]] = {
 
 # Preferred agent per department for whole-request routing.
 LEAD_AGENT: Dict[str, str] = {
-    "research": "Scout",
-    "health": "TriageBot",
-    "finance": "MarketAnalyst",
-    "code": "Coder",
-    "data": "DataEngineer",
-    "legal": "Paralegal",
-    "marketing": "Copywriter",
-    "ops": "Scheduler",
-    "security": "SecAuditor",
-    "support": "SupportAgent",
+    "research": "Aarav",
+    "health": "Nina",
+    "finance": "Priya",
+    "code": "Arjun",
+    "data": "Vikram",
+    "legal": "Raj",
+    "marketing": "Zara",
+    "ops": "Kofi",
+    "security": "Ishaan",
+    "support": "Tara",
 }
 
 # Hard ceiling on team collaboration rounds. Each round runs every agent,
@@ -86,6 +86,9 @@ PRIOR_OUTPUT_CHARS = 800
 
 class CEO:
     """Orchestrates the company: plans work, assigns agents, reports back."""
+
+    # The CEO has a name. Agents are addressed by first name everywhere.
+    name = "Manoj"
 
     def __init__(
         self,
@@ -168,8 +171,8 @@ class CEO:
 
         Each agent's prompt includes the original request plus the outputs
         of every teammate that ran before it, so later turns can build on,
-        critique, or revise earlier work. Typical shape: Coder drafts,
-        Reviewer critiques, Coder revises.
+        critique, or revise earlier work. Typical shape: Arjun drafts,
+        Sofia critiques, Arjun revises.
 
         Rounds are capped at MAX_TEAM_ROUNDS. Unknown agent names raise
         KeyError; an empty team raises ValueError.

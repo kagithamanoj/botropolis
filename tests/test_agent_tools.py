@@ -175,6 +175,6 @@ def test_builtin_agents_with_toolkits_load():
     from botropolis.core.registry import AgentRegistry
 
     registry = AgentRegistry()
-    assert registry.get("Scout").toolkit == ["web_search", "web_fetch"]
-    assert "shell" in registry.get("Coder").toolkit
-    assert registry.get("SupportAgent").toolkit == []
+    assert registry.get("Aarav").toolkit == ["web_search", "web_fetch"]
+    assert "shell" in registry.get("Arjun").toolkit
+    assert registry.get("Tara").toolkit == []

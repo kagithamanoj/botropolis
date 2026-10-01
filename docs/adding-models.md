@@ -37,7 +37,7 @@ After training (see `docs/training-guide.md`), add an entry under
 - id: botropolis-scout-7b
   status: ready                    # planned | training | ready | archived
   base_model: llama-3.1-8b
-  trained_for: Scout (research department)
+  trained_for: Aarav (research department)
   dataset: training/datasets/scout-v1.jsonl
   config: training/configs/lora_scout.yaml
   hf_hub: "kagithamanoj/botropolis-scout-7b"   # if pushed to Hugging Face
