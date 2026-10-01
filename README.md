@@ -104,6 +104,7 @@ botropolis roster --department ops
 botropolis ask Liam "summarize this quarter's roadmap"
 botropolis team "plan the launch" Liam Sofia --rounds 2
 botropolis evals
+botropolis notebook
 botropolis serve --port 8000
 ```
 

@@ -6,6 +6,7 @@ Subcommands:
     team "task" A [B]  Run agents as a team in collaboration rounds.
     evals               Run the scenario evals.
     serve               Start the web server.
+    notebook            Print the shared company notebook.
 
 Installed as the `botropolis` command (see pyproject.toml), or run as
 python -m botropolis.cli.
@@ -85,6 +86,20 @@ def cmd_serve(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_notebook(args: argparse.Namespace) -> int:
+    from botropolis.tools.builtin import notebook_path
+
+    try:
+        content = notebook_path().read_text(encoding="utf-8").strip()
+    except OSError:
+        content = ""
+    if content:
+        print(content)
+    else:
+        print("The notebook is empty. Agents with the notes tools write here.")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="botropolis", description="Botropolis: a company of bots."
@@ -114,6 +129,9 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("serve", help="Start the web server.")
     p.add_argument("--port", type=int, default=8000)
     p.set_defaults(func=cmd_serve)
+
+    p = sub.add_parser("notebook", help="Print the shared company notebook.")
+    p.set_defaults(func=cmd_notebook)
 
     return parser
 
