@@ -16,7 +16,7 @@ maps to the code.
         |           |            |            |           |
    research      health      finance       code  ... (10 total)
    /  |  \      /  |  \
- Aarav Meera Dev ...
+ Ethan Ava Jack ...
 ```
 
 ## Manoj, the CEO (orchestrator)

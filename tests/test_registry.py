@@ -61,8 +61,8 @@ def test_required_spec_fields(registry):
 
 
 def test_get_is_case_insensitive(registry):
-    assert registry.get("aarav").name == "Aarav"
-    assert registry.get("AARAV").name == "Aarav"
+    assert registry.get("ethan").name == "Ethan"
+    assert registry.get("ETHAN").name == "Ethan"
 
 
 def test_get_unknown_raises(registry):
@@ -77,6 +77,6 @@ def test_triagebot_has_medical_disclaimer(registry):
 
 
 def test_paralegal_has_legal_disclaimer(registry):
-    prompt = registry.get("Raj").system_prompt.lower()
+    prompt = registry.get("Henry").system_prompt.lower()
     assert "not a lawyer" in prompt
     assert "not legal advice" in prompt or "legal advice" in prompt

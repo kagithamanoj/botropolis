@@ -26,31 +26,31 @@
         <mxCell id="b-system7" value="&lt;b&gt;Departments: 10, agents: 20&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;" vertex="1" parent="1">
           <mxGeometry x="830" y="150" width="430" height="590" as="geometry" />
         </mxCell>
-        <mxCell id="d-system8" value="&lt;b&gt;research&lt;/b&gt;&lt;br&gt;Aarav: web research *&lt;br&gt;Meera: synthesis analyst&lt;br&gt;Dev: fact checker *" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="d-system8" value="&lt;b&gt;research&lt;/b&gt;&lt;br&gt;Ethan: web research *&lt;br&gt;Ava: synthesis analyst&lt;br&gt;Jack: fact checker *" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="845" y="195" width="200" height="88" as="geometry" />
         </mxCell>
-        <mxCell id="d-system9" value="&lt;b&gt;health&lt;/b&gt;&lt;br&gt;Lena: medical literature&lt;br&gt;Nina: symptom triage&lt;br&gt;Ravi: habits and fitness" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="d-system9" value="&lt;b&gt;health&lt;/b&gt;&lt;br&gt;Lena: medical literature&lt;br&gt;Nina: symptom triage&lt;br&gt;Owen: habits and fitness" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="1060" y="195" width="185" height="88" as="geometry" />
         </mxCell>
-        <mxCell id="d-system10" value="&lt;b&gt;finance&lt;/b&gt;&lt;br&gt;Priya: markets analyst&lt;br&gt;Omar: budget planner" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="d-system10" value="&lt;b&gt;finance&lt;/b&gt;&lt;br&gt;Mia: markets analyst&lt;br&gt;Mason: budget planner" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="845" y="293" width="200" height="88" as="geometry" />
         </mxCell>
-        <mxCell id="d-system11" value="&lt;b&gt;code&lt;/b&gt;&lt;br&gt;Arjun: software engineer *&lt;br&gt;Sofia: code reviewer *&lt;br&gt;Kabir: CI/CD and infra" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="d-system11" value="&lt;b&gt;code&lt;/b&gt;&lt;br&gt;Liam: software engineer *&lt;br&gt;Sofia: code reviewer *&lt;br&gt;Noah: CI/CD and infra" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="1060" y="293" width="185" height="88" as="geometry" />
         </mxCell>
-        <mxCell id="d-system12" value="&lt;b&gt;data&lt;/b&gt;&lt;br&gt;Vikram: data pipelines *&lt;br&gt;Elena: ML engineer *" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="d-system12" value="&lt;b&gt;data&lt;/b&gt;&lt;br&gt;Lucas: data pipelines *&lt;br&gt;Elena: ML engineer *" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="845" y="391" width="200" height="88" as="geometry" />
         </mxCell>
-        <mxCell id="d-system13" value="&lt;b&gt;legal&lt;/b&gt;&lt;br&gt;Raj: legal research" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="d-system13" value="&lt;b&gt;legal&lt;/b&gt;&lt;br&gt;Henry: legal research" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="1060" y="391" width="185" height="88" as="geometry" />
         </mxCell>
         <mxCell id="d-system14" value="&lt;b&gt;marketing&lt;/b&gt;&lt;br&gt;Zara: copywriter&lt;br&gt;Lila: SEO analyst" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="845" y="489" width="200" height="88" as="geometry" />
         </mxCell>
-        <mxCell id="d-system15" value="&lt;b&gt;ops&lt;/b&gt;&lt;br&gt;Anya: inbox assistant&lt;br&gt;Kofi: scheduler" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="d-system15" value="&lt;b&gt;ops&lt;/b&gt;&lt;br&gt;Anya: inbox assistant&lt;br&gt;Tyler: scheduler" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="1060" y="489" width="185" height="88" as="geometry" />
         </mxCell>
-        <mxCell id="d-system16" value="&lt;b&gt;security&lt;/b&gt;&lt;br&gt;Ishaan: security auditor" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="d-system16" value="&lt;b&gt;security&lt;/b&gt;&lt;br&gt;Ryan: security auditor" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="845" y="587" width="200" height="88" as="geometry" />
         </mxCell>
         <mxCell id="d-system17" value="&lt;b&gt;support&lt;/b&gt;&lt;br&gt;Tara: support agent" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
@@ -222,7 +222,7 @@
         <mxCell id="t-teaming2" value="How POST /team runs several agents as a collaborating team." style="text;html=1;fontSize=12;fontColor=#555555;align=left;" vertex="1" parent="1">
           <mxGeometry x="30" y="56" width="1200" height="24" as="geometry" />
         </mxCell>
-        <mxCell id="b-teaming3" value="&lt;b&gt;1. POST /team&lt;/b&gt;&lt;br&gt;Body: {request, agents: [&quot;Arjun&quot;, &quot;Sofia&quot;], rounds}.&lt;br&gt;Ask a named team to collaborate on one request." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+        <mxCell id="b-teaming3" value="&lt;b&gt;1. POST /team&lt;/b&gt;&lt;br&gt;Body: {request, agents: [&quot;Liam&quot;, &quot;Sofia&quot;], rounds}.&lt;br&gt;Ask a named team to collaborate on one request." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
           <mxGeometry x="200" y="100" width="480" height="96" as="geometry" />
         </mxCell>
         <mxCell id="c-teaming4" value="&lt;b&gt;1&lt;/b&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1a73e8;strokeColor=#1a73e8;fontColor=#ffffff;fontSize=16;fontStyle=1;" vertex="1" parent="1">
@@ -270,7 +270,7 @@
         <mxCell id="c-teaming18" value="&lt;b&gt;8&lt;/b&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1a73e8;strokeColor=#1a73e8;fontColor=#ffffff;fontSize=16;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="110" y="972" width="46" height="46" as="geometry" />
         </mxCell>
-        <mxCell id="n-teaming19" value="Example: Arjun drafts code, Sofia reviews it, Arjun revises. Each round, each agent sees what the others wrote, so feedback compounds instead of starting over." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="n-teaming19" value="Example: Liam drafts code, Sofia reviews it, Liam revises. Each round, each agent sees what the others wrote, so feedback compounds instead of starting over." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="720" y="340" width="340" height="150" as="geometry" />
         </mxCell>
         <mxCell id="e-teaming20" value="" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="b-teaming3" target="b-teaming5">
