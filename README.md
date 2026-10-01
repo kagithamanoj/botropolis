@@ -181,6 +181,17 @@ disk writes, fork bombs, and friends). The denylist is a guardrail
 against accidents, not a security boundary: treat tool access like
 giving a junior engineer a terminal on a scratch machine.
 
+### Watching tool calls live
+
+`GET /agents/{name}/ask/stream?request=...` streams one agent's run as
+server-sent events: `tool_started` and `tool_finished` as each tool runs,
+then `result` with the full AgentResult, then `done`. The war room tab
+uses it to show tool calls live while the agent works.
+
+```bash
+curl -N "http://localhost:8000/agents/Liam/ask/stream?request=List%20the%20workspace%20files"
+```
+
 ## Models
 
 Every agent spec names a model. `models/registry.yaml` is the central

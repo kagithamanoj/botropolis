@@ -8,6 +8,7 @@ Endpoints:
     GET  /agents           List every registered agent
     GET  /agents/{name}    Show one agent's details
     POST /agents/{name}/ask Chat with one agent directly (war room)
+    GET  /agents/{name}/ask/stream Stream one agent's tool calls (SSE)
     POST /team           Run a team of agents in collaboration rounds
     GET  /analytics        Per-agent usage totals (calls, latency, tokens)
     GET  /departments      List departments and their headcounts
@@ -19,18 +20,21 @@ The web UI lives in botropolis/web/ and needs no build step.
 
 from __future__ import annotations
 
+import json
+import queue
+import threading
 from pathlib import Path
-from typing import List
+from typing import Iterator, List, Tuple
 
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from botropolis.core import usage
 from botropolis.core.orchestrator import CEO, MAX_TEAM_ROUNDS
 from botropolis.core.registry import AgentRegistry
-from botropolis.core.schemas import AgentResult
+from botropolis.core.schemas import AgentResult, Task
 
 WEB_DIR = Path(__file__).parent / "web"
 
@@ -114,6 +118,64 @@ def ask_agent(name: str, body: AskRequest) -> dict:
     result = agent.run(body.request)
     _record_usage(result)
     return result.to_dict()
+
+
+def _agent_event_stream(agent, request_text: str) -> Iterator[str]:
+    """Yield server-sent events while one agent works.
+
+    Events: tool_started, tool_finished, result, failed, done.
+    The agent runs in a worker thread; its loop pushes events onto a
+    queue and this generator drains it. Usage is logged in the worker
+    once the run finishes.
+    """
+    events: "queue.Queue[Tuple[str | None, dict]]" = queue.Queue()
+
+    def on_event(kind: str, payload: dict) -> None:
+        events.put((kind, payload))
+
+    def runner() -> None:
+        try:
+            task = Task(
+                description=request_text,
+                department=agent.department,
+                agent_name=agent.name,
+            )
+            result = agent.run(task, on_event=on_event)
+            _record_usage(result)
+            events.put(("result", result.to_dict()))
+        except Exception as exc:  # never leave the stream hanging
+            events.put(("failed", {"message": str(exc)}))
+        finally:
+            events.put((None, {}))
+
+    thread = threading.Thread(target=runner, daemon=True)
+    thread.start()
+    while True:
+        kind, payload = events.get()
+        if kind is None:
+            break
+        yield f"event: {kind}\ndata: {json.dumps(payload, default=str)}\n\n"
+    yield "event: done\ndata: {}\n\n"
+
+
+@app.get("/agents/{name}/ask/stream")
+def ask_agent_stream(
+    name: str, request: str = Query(..., min_length=1)
+) -> StreamingResponse:
+    """Chat with one agent and stream its tool calls as server-sent events.
+
+    The war room UI uses this to show tool calls live while the agent
+    works. Event kinds: tool_started, tool_finished, result, failed, done.
+    """
+    try:
+        agent = registry.get(name)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"Unknown agent: {name}")
+    return StreamingResponse(
+        _agent_event_stream(agent, request),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache"},
+    )
 
 
 @app.post("/team")

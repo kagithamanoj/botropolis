@@ -70,20 +70,23 @@ class Agent:
             {"role": "user", "content": user_content},
         ]
 
-    def run(self, task: Task | str) -> AgentResult:
+    def run(self, task: Task | str, on_event=None) -> AgentResult:
         """Run one task and return an AgentResult.
 
         Agents with a toolkit run the think-act-observe loop; agents
         without one do a single model call, as before. Uses the configured
         model when credentials exist, otherwise the offline stub. The stub
         response is always labeled as offline output.
+
+        on_event is passed to the tool loop when the agent has a toolkit;
+        see run_tool_loop for the event kinds.
         """
         if isinstance(task, str):
             task = Task(description=task, department=self.department, agent_name=self.name)
         started = time.time()
         try:
             if self.toolkit:
-                return self._run_with_tools(task, started)
+                return self._run_with_tools(task, started, on_event=on_event)
             output = self.client.chat(self.model, self.build_messages(task))
             provider = self.client.provider_for(self.model)
             usage = getattr(self.client, "last_usage", None) or {}
@@ -116,9 +119,9 @@ class Agent:
                 elapsed_seconds=time.time() - started,
             )
 
-    def _run_with_tools(self, task: Task, started: float) -> AgentResult:
+    def _run_with_tools(self, task: Task, started: float, on_event=None) -> AgentResult:
         """Run the think-act-observe loop and wrap it in an AgentResult."""
-        output, tool_calls, usage = run_tool_loop(self, task)
+        output, tool_calls, usage = run_tool_loop(self, task, on_event=on_event)
         provider = self.client.provider_for(self.model)
         return AgentResult(
             agent_name=self.name,

@@ -368,19 +368,6 @@
     warroomMessages.appendChild(wrap);
   }
 
-  function addWarroomTyping() {
-    var wrap = document.createElement("div");
-    wrap.className = "msg company";
-    wrap.id = "warroom-typing";
-    wrap.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
-    warroomMessages.appendChild(wrap);
-  }
-
-  function removeWarroomTyping() {
-    var row = document.getElementById("warroom-typing");
-    if (row) row.remove();
-  }
-
   function addWarroomResult(name, r) {
     var wrap = document.createElement("div");
     wrap.className = "msg company";
@@ -397,29 +384,80 @@
     warroomInput.value = "";
     warroomSend.disabled = true;
     addWarroomUser(text);
-    addWarroomTyping();
 
-    fetch("/agents/" + encodeURIComponent(name) + "/ask", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ request: text })
-    })
-      .then(function (resp) {
-        if (!resp.ok) throw new Error("server returned " + resp.status);
-        return resp.json();
-      })
-      .then(function (result) {
-        removeWarroomTyping();
-        addWarroomResult(name, result);
-      })
-      .catch(function (err) {
-        removeWarroomTyping();
-        addWarroomNote("Something went wrong: " + err.message);
-      })
-      .finally(function () {
+    /* Live card: tool calls appear here as the agent works, then the
+       full result card replaces it. */
+    var liveWrap = document.createElement("div");
+    liveWrap.className = "msg company";
+    liveWrap.innerHTML = '<div class="report"><div class="ceo-label">' + esc(name) +
+      ' <span class="live-dot">live</span></div><div class="tool-calls"></div></div>';
+    warroomMessages.appendChild(liveWrap);
+    scrollDown();
+    var liveList = liveWrap.querySelector(".tool-calls");
+    var callCount = 0;
+    var finished = false;
+
+    var src = new EventSource("/agents/" + encodeURIComponent(name) +
+      "/ask/stream?request=" + encodeURIComponent(text));
+
+    function close() {
+      if (!finished) {
+        finished = true;
+        src.close();
         warroomSend.disabled = false;
         warroomInput.focus();
-      });
+      }
+    }
+
+    function fail(msg) {
+      liveWrap.remove();
+      addWarroomNote("Something went wrong: " + msg);
+      close();
+    }
+
+    src.addEventListener("tool_started", function (e) {
+      var data = JSON.parse(e.data);
+      callCount += 1;
+      var div = document.createElement("div");
+      div.className = "tool-call";
+      div.id = "live-call-" + callCount;
+      div.innerHTML = '<span class="tool-name">' + esc(data.tool) + "</span> " +
+        '<span class="tool-args">' + esc(JSON.stringify(data.args || {})) + "</span> " +
+        '<span class="tool-status running">running</span>';
+      liveList.appendChild(div);
+      scrollDown();
+    });
+
+    src.addEventListener("tool_finished", function () {
+      var div = document.getElementById("live-call-" + callCount);
+      if (div) {
+        var badge = div.querySelector(".tool-status");
+        /* The full result card carries the final status; here we just
+           mark the call as no longer running. */
+        badge.className = "tool-status ok";
+        badge.textContent = "done";
+      }
+      scrollDown();
+    });
+
+    src.addEventListener("result", function (e) {
+      liveWrap.remove();
+      addWarroomResult(name, JSON.parse(e.data));
+      close();
+    });
+
+    src.addEventListener("failed", function (e) {
+      var msg = "stream failed";
+      try { msg = JSON.parse(e.data).message || msg; } catch (err) { /* keep default */ }
+      fail(msg);
+    });
+
+    src.onerror = function () {
+      if (!finished) fail("Lost the stream. The server may be busy; try again.");
+    };
+
+    /* If the agent has no toolkit there are no tool events; the stream
+       just yields the result, so the live card flashes by quickly. */
   });
 
   /* ---- Analytics ---- */

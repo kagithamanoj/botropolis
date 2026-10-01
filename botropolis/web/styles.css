@@ -170,6 +170,22 @@ main { flex: 1; padding: 18px; }
 .tool-call .tool-name { color: var(--accent); font-weight: 600; }
 .tool-call .tool-status.ok { color: #4caf7d; }
 .tool-call .tool-status.failed { color: #e06c5c; }
+.tool-call .tool-status.running { color: var(--stub); }
+
+.live-dot {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--stub);
+  border: 1px solid var(--stub);
+  border-radius: 20px;
+  padding: 1px 8px;
+  margin-left: 6px;
+  vertical-align: middle;
+  animation: blink 1.2s infinite;
+}
 
 .stub-badge {
   display: inline-block;

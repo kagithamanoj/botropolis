@@ -140,12 +140,29 @@ def execute_tool_call(
     )
 
 
-def run_tool_loop(agent: "Agent", task: "Task") -> Tuple[str, List[ToolCall], Dict[str, int]]:
+def run_tool_loop(
+    agent: "Agent",
+    task: "Task",
+    on_event=None,
+) -> Tuple[str, List[ToolCall], Dict[str, int]]:
     """Run the think-act-observe loop for one task.
 
     Returns (final_answer, tool_calls, usage) where usage is
     {"input": n, "output": n} summed across the loop's model calls.
+
+    on_event, when given, is called as on_event(kind, payload) with
+    ("tool_started", {"tool", "args"}) before each tool runs and
+    ("tool_finished", tool_call_dict) after. It never breaks the loop:
+    a raising callback is swallowed.
     """
+
+    def emit(kind: str, payload: Dict[str, Any]) -> None:
+        if on_event is None:
+            return
+        try:
+            on_event(kind, payload)
+        except Exception:
+            pass
     messages = agent.build_messages(task)
     system = messages[0]["content"] + "\n\n" + tool_prompt(agent.toolkit)
     convo = [{"role": "system", "content": system}] + messages[1:]
@@ -174,8 +191,10 @@ def run_tool_loop(agent: "Agent", task: "Task") -> Tuple[str, List[ToolCall], Di
             )
         else:
             tool_name, args = payload
+            emit("tool_started", {"tool": tool_name, "args": args})
             call = execute_tool_call(agent.toolkit, tool_name, args)
             tool_calls.append(call)
+            emit("tool_finished", call.to_dict())
             if call.success:
                 observation = call.result_preview or "(empty result)"
             else:
