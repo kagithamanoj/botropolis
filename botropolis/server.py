@@ -8,6 +8,7 @@ Endpoints:
     GET  /agents           List every registered agent
     GET  /agents/{name}    Show one agent's details
     POST /agents/{name}/ask Chat with one agent directly (war room)
+    POST /team           Run a team of agents in collaboration rounds
     GET  /analytics        Per-agent usage totals (calls, latency, tokens)
     GET  /departments      List departments and their headcounts
     GET  /health           Liveness check
@@ -19,6 +20,7 @@ The web UI lives in botropolis/web/ and needs no build step.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import List
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
@@ -26,7 +28,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from botropolis.core import usage
-from botropolis.core.orchestrator import CEO
+from botropolis.core.orchestrator import CEO, MAX_TEAM_ROUNDS
 from botropolis.core.registry import AgentRegistry
 from botropolis.core.schemas import AgentResult
 
@@ -46,6 +48,19 @@ class AskRequest(BaseModel):
     """Body for POST /ask."""
 
     request: str = Field(..., min_length=1, description="What you want the company to do")
+
+
+class TeamRequest(BaseModel):
+    """Body for POST /team."""
+
+    request: str = Field(..., min_length=1, description="The task for the team")
+    agents: List[str] = Field(..., min_length=1, description="Agent names, in run order")
+    rounds: int = Field(
+        default=2,
+        ge=1,
+        le=MAX_TEAM_ROUNDS,
+        description="Collaboration rounds; each agent runs once per round",
+    )
 
 
 @app.get("/health")
@@ -99,6 +114,24 @@ def ask_agent(name: str, body: AskRequest) -> dict:
     result = agent.run(body.request)
     _record_usage(result)
     return result.to_dict()
+
+
+@app.post("/team")
+def team(body: TeamRequest) -> dict:
+    """Run a team of agents in collaboration rounds.
+
+    Each agent sees the request plus earlier teammates' outputs, so the
+    team can draft, critique, and revise. Returns a TeamReport.
+    """
+    try:
+        report = ceo.team(body.request, body.agents, rounds=body.rounds)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    for team_round in report.rounds:
+        _record_usage(team_round.result)
+    return report.to_dict()
 
 
 @app.get("/analytics")
