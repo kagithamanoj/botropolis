@@ -21,6 +21,7 @@
       <button id="tab-team" class="tab" type="button">Teaming</button>
       <button id="tab-warroom" class="tab" type="button">War room</button>
       <button id="tab-analytics" class="tab" type="button">Analytics</button>
+      <button id="tab-notebook" class="tab" type="button">Notebook</button>
       <button id="tab-roster" class="tab" type="button">Roster</button>
     </nav>
   </header>
@@ -89,6 +90,18 @@
       <div id="analytics-table"></div>
       <p class="hint">Counts every agent run, via Manoj or the war room. Runs on the
       offline stub report 0 tokens; those rows are estimates at best.</p>
+    </section>
+
+    <!-- Notebook view: read-only view of the shared company notebook -->
+    <section id="view-notebook" class="view hidden">
+      <div class="analytics-head">
+        <h2>Notebook</h2>
+        <button id="notebook-refresh" type="button" class="tab">Refresh</button>
+      </div>
+      <pre id="notebook-content" class="notebook"></pre>
+      <p class="hint">The shared company notebook. Agents with the notes tools
+      write here; humans can read and edit the file directly
+      (<code>botropolis/data/workspace/notes.md</code>). This view is read-only.</p>
     </section>
 
     <!-- Roster view -->

@@ -353,6 +353,11 @@ _NOTES_FILE = "notes.md"
 _NOTES_READ_CHARS = 4000
 
 
+def notebook_path():
+    """Absolute path of the shared company notebook file."""
+    return resolve_workspace_path(_NOTES_FILE)
+
+
 class NotesAppendTool(Tool):
     """Append a timestamped entry to the shared company notebook."""
 
