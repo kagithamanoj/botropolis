@@ -48,10 +48,22 @@ registry = AgentRegistry()
 ceo = CEO(registry)
 
 
+class ChatTurn(BaseModel):
+    """One earlier turn of the chat, for conversational context."""
+
+    role: str = Field(..., pattern="^(user|assistant)$")
+    content: str = Field(..., min_length=1, max_length=4000)
+
+
 class AskRequest(BaseModel):
     """Body for POST /ask."""
 
     request: str = Field(..., min_length=1, description="What you want the company to do")
+    history: List[ChatTurn] = Field(
+        default_factory=list,
+        max_length=20,
+        description="Earlier chat turns, oldest first",
+    )
 
 
 class TeamRequest(BaseModel):
@@ -87,7 +99,8 @@ app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 @app.post("/ask")
 def ask(body: AskRequest) -> dict:
     """Send a request to Manoj (the CEO); get back a full CompanyReport."""
-    report = ceo.handle(body.request)
+    history = [turn.model_dump() for turn in body.history]
+    report = ceo.handle(body.request, history=history)
     for result in report.results:
         _record_usage(result)
     return report.to_dict()

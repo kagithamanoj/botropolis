@@ -42,3 +42,36 @@ def test_summary_mentions_departments(ceo):
     report = ceo.handle("Audit my API for security vulnerabilities")
     assert "security" in report.summary.lower()
     assert report.departments_involved
+
+
+def test_plan_attaches_chat_history_to_tasks(ceo):
+    history = [
+        {"role": "user", "content": "What is our Q3 revenue?"},
+        {"role": "assistant", "content": "Q3 revenue was $4.2M."},
+    ]
+    tasks = ceo.plan("And Q4?", history=history)
+    assert tasks
+    for task in tasks:
+        ctx = task.context.get("chat_history", "")
+        assert "user: What is our Q3 revenue?" in ctx
+        assert "assistant: Q3 revenue was $4.2M." in ctx
+
+
+def test_plan_without_history_has_no_chat_context(ceo):
+    tasks = ceo.plan("Hello")
+    assert all("chat_history" not in t.context for t in tasks)
+
+
+def test_plan_caps_history_turns(ceo):
+    history = [{"role": "user", "content": f"turn {i}"} for i in range(30)]
+    tasks = ceo.plan("follow up", history=history)
+    ctx = tasks[0].context["chat_history"]
+    assert "turn 0" not in ctx
+    assert "turn 29" in ctx
+    assert len(ctx.splitlines()) == 10
+
+
+def test_handle_accepts_history(ceo):
+    history = [{"role": "user", "content": "Remind me what we discussed."}]
+    report = ceo.handle("Summarize it", history=history)
+    assert report.results
