@@ -62,7 +62,8 @@ def test_toolkit_defaults_to_empty_and_single_shot(tmp_path):
     assert agent.toolkit == []
     result = agent.run("do a thing")
     assert result.success
-    assert result.output == "FINAL: plain answer"
+    # Same answer semantics as the tool loop: the FINAL: marker is stripped.
+    assert result.output == "plain answer"
     assert result.tool_calls == []
 
 
