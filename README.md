@@ -120,6 +120,51 @@ Rounds are capped at 3. Unknown agent names return 404. Team runs are
 logged to the usage log like any other invocation, so they show up in
 `GET /analytics` too.
 
+## Agent tools
+
+Agents can do more than answer from memory. Each agent spec has a
+`toolkit` list naming the tools that agent may actually call:
+
+```yaml
+toolkit:
+  - web_search
+  - web_fetch
+```
+
+Current toolkits: Scout and FactChecker get web search and fetch; Coder
+gets shell plus file tools; Reviewer gets file reading; DataEngineer and
+MLEngineer get shell, file tools, and the calculator. Every other agent
+has no toolkit and behaves exactly as before: one model call, one answer.
+
+When an agent has a toolkit, it runs a think-act-observe loop instead of
+a single shot. The protocol is plain text, so it works with any model,
+including the offline stub and small fine-tunes. No provider-specific
+function calling is involved:
+
+```
+ACTION: {"tool": "<name>", "args": {...}}
+FINAL: <the answer>
+```
+
+The model thinks, emits an ACTION, gets back an `OBSERVATION:` with the
+tool result, and repeats until it replies with FINAL. Anything that is
+not an ACTION line counts as the final answer, which keeps weak models
+and the stub safe by default. Loops stop after `max_steps` (default 8,
+configurable per agent in YAML). Every tool call is recorded on the
+result and shown in the web UI agent cards.
+
+Available tools: `web_search` (DuckDuckGo, no key needed), `web_fetch`
+(page text extraction), `shell`, `read_file`, `write_file`, `list_dir`,
+`calculator`, `current_time`.
+
+Safety model: file and shell tools are confined to an agent workspace
+(`botropolis/data/workspace`, or `BOTROPOLIS_WORKSPACE` to move it).
+Paths that escape the workspace are refused. Shell commands run with a
+30 second timeout and a denylist blocks destructive patterns (`rm -rf /`,
+disk writes, fork bombs, and friends). The denylist is a guardrail
+against accidents, not a security boundary: treat tool access like
+giving a junior engineer a terminal on a scratch machine.
+
 ## Models
 
 Every agent spec names a model. `models/registry.yaml` is the central

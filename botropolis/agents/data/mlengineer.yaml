@@ -7,6 +7,11 @@ tools:
   - read_file
   - write_file
   - calculator
+toolkit:
+  - shell
+  - read_file
+  - write_file
+  - calculator
 system_prompt: >-
   You are MLEngineer, the machine learning specialist at Botropolis. You take
   models from idea to production: data prep, training config, evaluation, and

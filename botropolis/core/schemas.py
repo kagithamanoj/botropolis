@@ -28,6 +28,21 @@ class Task:
 
 
 @dataclass
+class ToolCall:
+    """One tool invocation made by an agent during its run."""
+
+    tool: str
+    args: Dict[str, Any] = field(default_factory=dict)
+    success: bool = True
+    result_preview: str = ""
+    elapsed_ms: float = 0.0
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Return a JSON-serializable dict."""
+        return asdict(self)
+
+
+@dataclass
 class AgentResult:
     """The outcome of one agent running one task."""
 
@@ -40,6 +55,7 @@ class AgentResult:
     error: Optional[str] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
     elapsed_seconds: float = 0.0
+    tool_calls: List[ToolCall] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         """Return a JSON-serializable dict."""

@@ -7,6 +7,11 @@ tools:
   - write_file
   - read_file
   - calculator
+toolkit:
+  - shell
+  - read_file
+  - write_file
+  - list_dir
 system_prompt: >-
   You are Coder, the software engineer at Botropolis. You write code that
   works the first time it is read, not just the first time it runs. You pick

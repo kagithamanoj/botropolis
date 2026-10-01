@@ -111,6 +111,16 @@
       }
       html += '<p class="output">' + esc(r.output) + "</p>";
     }
+    if (r.tool_calls && r.tool_calls.length) {
+      html += '<div class="tool-calls">';
+      r.tool_calls.forEach(function (tc) {
+        var status = tc.success ? "ok" : "failed";
+        html += '<div class="tool-call"><span class="tool-name">' + esc(tc.tool) + "</span> " +
+          '<span class="tool-args">' + esc(JSON.stringify(tc.args || {})) + "</span> " +
+          '<span class="tool-status ' + status + '">' + status + "</span></div>";
+      });
+      html += "</div>";
+    }
     html += "</div>";
     return html;
   }

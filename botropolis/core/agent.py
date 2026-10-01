@@ -14,8 +14,10 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 
+from botropolis.core.loop import DEFAULT_MAX_STEPS, run_tool_loop
 from botropolis.core.models import ModelClient
 from botropolis.core.schemas import AgentResult, Task
+from botropolis.tools import TOOLS
 
 REQUIRED_SPEC_FIELDS = (
     "name",
@@ -46,6 +48,14 @@ class Agent:
         self.model: str = spec["model"]
         self.system_prompt: str = spec["system_prompt"]
         self.tools: List[str] = list(spec.get("tools", []))
+        self.toolkit: List[str] = list(spec.get("toolkit", []))
+        self.max_steps: int = int(spec.get("max_steps", DEFAULT_MAX_STEPS))
+        unknown = [t for t in self.toolkit if t not in TOOLS]
+        if unknown:
+            raise ValueError(
+                f"{self.spec_path}: unknown tools in toolkit: {unknown}. "
+                f"Available: {sorted(TOOLS)}"
+            )
         self.example_tasks: List[str] = list(spec.get("example_tasks", []))
         self.client = client or ModelClient()
 
@@ -63,13 +73,17 @@ class Agent:
     def run(self, task: Task | str) -> AgentResult:
         """Run one task and return an AgentResult.
 
-        Uses the configured model when credentials exist, otherwise the
-        offline stub. The stub response is always labeled as offline output.
+        Agents with a toolkit run the think-act-observe loop; agents
+        without one do a single model call, as before. Uses the configured
+        model when credentials exist, otherwise the offline stub. The stub
+        response is always labeled as offline output.
         """
         if isinstance(task, str):
             task = Task(description=task, department=self.department, agent_name=self.name)
         started = time.time()
         try:
+            if self.toolkit:
+                return self._run_with_tools(task, started)
             output = self.client.chat(self.model, self.build_messages(task))
             provider = self.client.provider_for(self.model)
             usage = getattr(self.client, "last_usage", None) or {}
@@ -102,6 +116,30 @@ class Agent:
                 elapsed_seconds=time.time() - started,
             )
 
+    def _run_with_tools(self, task: Task, started: float) -> AgentResult:
+        """Run the think-act-observe loop and wrap it in an AgentResult."""
+        output, tool_calls, usage = run_tool_loop(self, task)
+        provider = self.client.provider_for(self.model)
+        return AgentResult(
+            agent_name=self.name,
+            department=self.department,
+            task_id=task.id,
+            output=output,
+            success=True,
+            confidence=0.85 if provider != "stub" else 0.5,
+            metadata={
+                "model": self.model,
+                "provider": provider,
+                "stub": provider == "stub",
+                "tokens_in": int(usage.get("input", 0)),
+                "tokens_out": int(usage.get("output", 0)),
+                "toolkit": self.toolkit,
+                "tool_calls": len(tool_calls),
+            },
+            elapsed_seconds=time.time() - started,
+            tool_calls=tool_calls,
+        )
+
     def describe(self) -> Dict[str, Any]:
         """Return a short public description of this agent."""
         return {
@@ -111,5 +149,6 @@ class Agent:
             "specialty": self.specialty,
             "model": self.model,
             "tools": self.tools,
+            "toolkit": self.toolkit,
             "example_tasks": self.example_tasks,
         }
