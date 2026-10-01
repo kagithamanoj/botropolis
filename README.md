@@ -24,22 +24,22 @@ This is that idea, in Python.
         |           |            |            |            |
     research     health      finance       code         data
    /   |   \    /  |  \       /   \       /  |  \       /   \
- Aarav Meera Dev Nina Ravi Lena Omar Priya Arjun Sofia Kabir ...
+ Ethan Ava Jack Nina Owen Lena Mason Mia Liam Sofia Noah ...
 ```
 
 Full roster:
 
 | Department | Agents |
 |------------|--------|
-| research   | Aarav (web research), Meera (synthesis), Dev (verification) |
-| health     | Nina (symptom triage), Ravi (habits), Lena (literature) |
-| finance    | Priya (markets), Omar (budgeting) |
-| code       | Arjun, Sofia, Kabir |
-| data       | Vikram (pipelines), Elena (training and eval) |
-| legal      | Raj (research summaries) |
+| research   | Ethan (web research), Ava (synthesis), Jack (verification) |
+| health     | Nina (symptom triage), Owen (habits), Lena (literature) |
+| finance    | Mia (markets), Mason (budgeting) |
+| code       | Liam, Sofia, Noah |
+| data       | Lucas (pipelines), Elena (training and eval) |
+| legal      | Henry (research summaries) |
 | marketing  | Zara, Lila |
-| ops        | Kofi, Anya |
-| security   | Ishaan |
+| ops        | Tyler, Anya |
+| security   | Ryan |
 | support    | Tara |
 
 Health and legal agents carry explicit disclaimers in their prompts. They
@@ -127,7 +127,7 @@ final state.
 ```bash
 curl -X POST http://localhost:8000/team \
   -H "Content-Type: application/json" \
-  -d '{"request": "Write a Python retry helper", "agents": ["Arjun", "Sofia"], "rounds": 2}'
+  -d '{"request": "Write a Python retry helper", "agents": ["Liam", "Sofia"], "rounds": 2}'
 ```
 
 Rounds are capped at 3. Unknown agent names return 404. Team runs are
@@ -145,8 +145,8 @@ toolkit:
   - web_fetch
 ```
 
-Current toolkits: Aarav and Dev get web search and fetch; Arjun
-gets shell plus file tools; Sofia gets file reading; Vikram and
+Current toolkits: Ethan and Jack get web search and fetch; Liam
+gets shell plus file tools; Sofia gets file reading; Lucas and
 Elena get shell, file tools, and the calculator. Every other agent
 has no toolkit and behaves exactly as before: one model call, one answer.
 

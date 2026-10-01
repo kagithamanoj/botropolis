@@ -17,7 +17,7 @@ base_models:
   - id: claude-sonnet-4-5
     provider: anthropic
     context_window: 200000
-    notes: Strong reasoning and long context. Used by Meera, Sofia, Ishaan.
+    notes: Strong reasoning and long context. Used by Ava, Sofia, Ryan.
 
   - id: gemini-2.5-pro
     provider: google
@@ -56,19 +56,19 @@ fine_tunes:
   - id: botropolis-scout-7b
     status: planned
     base_model: llama-3.1-8b
-    trained_for: Aarav (research department, web research specialist)
+    trained_for: Ethan (research department, web research specialist)
     dataset: training/datasets/sample.jsonl
     config: training/configs/lora_scout.yaml
     # hf_hub: "kagithamanoj/botropolis-scout-7b"
     # local_path: "./checkpoints/botropolis-scout-7b"
     # gguf_path: "./checkpoints/botropolis-scout-7b-q4_k_m.gguf"
     # ollama_tag: "botropolis-scout-7b"
-    notes: LoRA fine-tune to make Aarav decompose questions and cite carefully. Not trained yet.
+    notes: LoRA fine-tune to make Ethan decompose questions and cite carefully. Not trained yet.
 
   - id: botropolis-coder-7b
     status: planned
     base_model: qwen3-8b
-    trained_for: Arjun (code department, software engineer)
+    trained_for: Liam (code department, software engineer)
     dataset: null
     config: null
     # hf_hub: "kagithamanoj/botropolis-coder-7b"
@@ -80,7 +80,7 @@ fine_tunes:
   - id: botropolis-scout-tiny
     status: trained
     base_model: null
-    trained_for: Aarav (research department, web research specialist)
+    trained_for: Ethan (research department, web research specialist)
     dataset: training/datasets/scout_demo.jsonl
     config: training/train_scout_tiny.py
     local_path: "./models/weights/botropolis-scout-tiny"

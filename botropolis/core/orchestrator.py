@@ -62,15 +62,15 @@ DEPARTMENT_KEYWORDS: Dict[str, Tuple[str, ...]] = {
 
 # Preferred agent per department for whole-request routing.
 LEAD_AGENT: Dict[str, str] = {
-    "research": "Aarav",
+    "research": "Ethan",
     "health": "Nina",
-    "finance": "Priya",
-    "code": "Arjun",
-    "data": "Vikram",
-    "legal": "Raj",
+    "finance": "Mia",
+    "code": "Liam",
+    "data": "Lucas",
+    "legal": "Henry",
     "marketing": "Zara",
-    "ops": "Kofi",
-    "security": "Ishaan",
+    "ops": "Tyler",
+    "security": "Ryan",
     "support": "Tara",
 }
 
@@ -171,8 +171,8 @@ class CEO:
 
         Each agent's prompt includes the original request plus the outputs
         of every teammate that ran before it, so later turns can build on,
-        critique, or revise earlier work. Typical shape: Arjun drafts,
-        Sofia critiques, Arjun revises.
+        critique, or revise earlier work. Typical shape: Liam drafts,
+        Sofia critiques, Liam revises.
 
         Rounds are capped at MAX_TEAM_ROUNDS. Unknown agent names raise
         KeyError; an empty team raises ValueError.
