@@ -474,15 +474,16 @@
           return;
         }
         var html = '<table class="analytics-table">';
-        html += "<tr><th>Agent</th><th>Calls</th><th>Avg ms</th><th>Tokens</th><th>Stub runs</th></tr>";
+        html += "<tr><th>Agent</th><th>Calls</th><th>Avg ms</th><th>Tokens</th><th>Tool calls</th><th>Stub runs</th></tr>";
         names.forEach(function (n) {
           var a = agents[n];
           html += "<tr><td>" + esc(n) + "</td><td>" + a.calls + "</td><td>" +
             a.avg_latency_ms + "</td><td>" + a.tokens_total + "</td><td>" +
-            a.stub_calls + "</td></tr>";
+            (a.tool_calls || 0) + "</td><td>" + a.stub_calls + "</td></tr>";
         });
         html += "</table>";
         html += '<p class="totals-line">Total calls: ' + totals.calls +
+          " - tool calls: " + (totals.tool_calls || 0) +
           " - stub runs: " + totals.stub_calls + "</p>";
         analyticsTable.innerHTML = html;
       })

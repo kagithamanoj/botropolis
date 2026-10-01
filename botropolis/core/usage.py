@@ -28,6 +28,7 @@ def log_invocation(
     tokens_in: int = 0,
     tokens_out: int = 0,
     success: bool = True,
+    tool_calls: int = 0,
 ) -> Dict[str, Any]:
     """Append one agent invocation to the usage log.
 
@@ -43,6 +44,7 @@ def log_invocation(
         "tokens_in": int(tokens_in),
         "tokens_out": int(tokens_out),
         "success": bool(success),
+        "tool_calls": int(tool_calls),
     }
     try:
         LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -62,6 +64,7 @@ def get_summary() -> Dict[str, Any]:
     calls = 0
     successes = 0
     stub_calls = 0
+    tool_calls_total = 0
     per_agent: Dict[str, Dict[str, Any]] = defaultdict(
         lambda: {
             "calls": 0,
@@ -70,6 +73,7 @@ def get_summary() -> Dict[str, Any]:
             "tokens_in": 0,
             "tokens_out": 0,
             "stub_calls": 0,
+            "tool_calls": 0,
             "models": set(),
         }
     )
@@ -95,6 +99,8 @@ def get_summary() -> Dict[str, Any]:
                 if row.get("provider") == "stub":
                     entry["stub_calls"] += 1
                     stub_calls += 1
+                entry["tool_calls"] += int(row.get("tool_calls", 0) or 0)
+                tool_calls_total += int(row.get("tool_calls", 0) or 0)
                 if row.get("model"):
                     entry["models"].add(row["model"])
                 calls += 1
@@ -112,6 +118,7 @@ def get_summary() -> Dict[str, Any]:
             "tokens_out": entry["tokens_out"],
             "tokens_total": entry["tokens_in"] + entry["tokens_out"],
             "stub_calls": entry["stub_calls"],
+            "tool_calls": entry["tool_calls"],
             "models": sorted(entry["models"]),
         }
     return {
@@ -120,6 +127,7 @@ def get_summary() -> Dict[str, Any]:
             "calls": calls,
             "successes": successes,
             "stub_calls": stub_calls,
+            "tool_calls": tool_calls_total,
             "log_path": str(LOG_PATH),
         },
     }
