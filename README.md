@@ -45,6 +45,20 @@ Full roster:
 Health and legal agents carry explicit disclaimers in their prompts. They
 give guidance and summaries, not diagnoses or legal advice.
 
+## Architecture diagrams
+
+`docs/architecture.drawio` is a 4-page draw.io set you can open and edit in
+[draw.io](https://app.diagrams.net). Each page numbers every step and explains
+what happens at each point:
+
+1. System overview: entry points, the FastAPI server, CEO Manoj, all 10
+   departments and 20 agents, model providers, and the side systems (model
+   registry, training pipeline, usage analytics, tool sandbox).
+2. Request lifecycle: what happens step by step when `POST /ask` arrives,
+   including the ReAct think-act-observe loop and its safety rails.
+3. Teaming: how `POST /team` runs several agents in collaboration rounds.
+4. Training pipeline: from dataset to trained model to registry to agent.
+
 ## Quickstart
 
 Requires Python 3.10+.

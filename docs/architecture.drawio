@@ -1,0 +1,377 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" version="26.0.0">
+  <diagram id="pg-System-overview" name="System overview">
+    <mxGraphModel dx="800" dy="500" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1050" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="t-system1" value="Botropolis: a company of bots" style="text;html=1;fontSize=24;fontStyle=1;align=left;" vertex="1" parent="1">
+          <mxGeometry x="30" y="16" width="900" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="t-system2" value="System overview: a request travels from the user through the CEO to a specialist agent and its model, then back again." style="text;html=1;fontSize=12;fontColor=#555555;align=left;" vertex="1" parent="1">
+          <mxGeometry x="30" y="56" width="1200" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="b-system3" value="&lt;b&gt;Web UI&lt;/b&gt;&lt;br&gt;browser&lt;br&gt;Chat, Roster,&lt;br&gt;War room, Analytics" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="30" y="300" width="180" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="b-system4" value="&lt;b&gt;API clients&lt;/b&gt;&lt;br&gt;curl, scripts,&lt;br&gt;SDKs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="30" y="440" width="180" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="b-system5" value="&lt;b&gt;FastAPI server&lt;/b&gt;&lt;br&gt;botropolis/server.py&lt;br&gt;&lt;br&gt;POST /ask&lt;br&gt;POST /team&lt;br&gt;POST /agents/{name}/ask&lt;br&gt;GET /agents&lt;br&gt;GET /agents/{name}&lt;br&gt;GET /departments&lt;br&gt;GET /analytics&lt;br&gt;GET /health" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="260" y="300" width="240" height="290" as="geometry" />
+        </mxCell>
+        <mxCell id="b-system6" value="&lt;b&gt;CEO Manoj&lt;/b&gt;&lt;br&gt;orchestrator&lt;br&gt;&lt;br&gt;parses intent,&lt;br&gt;routes to a department,&lt;br&gt;synthesizes reports" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="550" y="365" width="200" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="b-system7" value="&lt;b&gt;Departments: 10, agents: 20&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;" vertex="1" parent="1">
+          <mxGeometry x="830" y="150" width="430" height="590" as="geometry" />
+        </mxCell>
+        <mxCell id="d-system8" value="&lt;b&gt;research&lt;/b&gt;&lt;br&gt;Aarav: web research *&lt;br&gt;Meera: synthesis analyst&lt;br&gt;Dev: fact checker *" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="845" y="195" width="200" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="d-system9" value="&lt;b&gt;health&lt;/b&gt;&lt;br&gt;Lena: medical literature&lt;br&gt;Nina: symptom triage&lt;br&gt;Ravi: habits and fitness" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="195" width="185" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="d-system10" value="&lt;b&gt;finance&lt;/b&gt;&lt;br&gt;Priya: markets analyst&lt;br&gt;Omar: budget planner" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="845" y="293" width="200" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="d-system11" value="&lt;b&gt;code&lt;/b&gt;&lt;br&gt;Arjun: software engineer *&lt;br&gt;Sofia: code reviewer *&lt;br&gt;Kabir: CI/CD and infra" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="293" width="185" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="d-system12" value="&lt;b&gt;data&lt;/b&gt;&lt;br&gt;Vikram: data pipelines *&lt;br&gt;Elena: ML engineer *" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="845" y="391" width="200" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="d-system13" value="&lt;b&gt;legal&lt;/b&gt;&lt;br&gt;Raj: legal research" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="391" width="185" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="d-system14" value="&lt;b&gt;marketing&lt;/b&gt;&lt;br&gt;Zara: copywriter&lt;br&gt;Lila: SEO analyst" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="845" y="489" width="200" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="d-system15" value="&lt;b&gt;ops&lt;/b&gt;&lt;br&gt;Anya: inbox assistant&lt;br&gt;Kofi: scheduler" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="489" width="185" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="d-system16" value="&lt;b&gt;security&lt;/b&gt;&lt;br&gt;Ishaan: security auditor" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="845" y="587" width="200" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="d-system17" value="&lt;b&gt;support&lt;/b&gt;&lt;br&gt;Tara: support agent" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="587" width="185" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="p-system18" value="&lt;b&gt;OpenAI&lt;/b&gt;&lt;br&gt;gpt-4o" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="1310" y="205" width="200" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="p-system19" value="&lt;b&gt;Anthropic&lt;/b&gt;&lt;br&gt;claude-sonnet-4-5" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="1310" y="303" width="200" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="p-system20" value="&lt;b&gt;Google&lt;/b&gt;&lt;br&gt;gemini-2.5-pro" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="1310" y="401" width="200" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="p-system21" value="&lt;b&gt;Ollama&lt;/b&gt;&lt;br&gt;llama-3.3-70b, local" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="1310" y="499" width="200" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="p-system22" value="&lt;b&gt;Stub&lt;/b&gt;&lt;br&gt;offline fallback" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="1310" y="597" width="200" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="n-system28" value="Responses travel back along the same path: provider to agent to CEO Manoj to the server to the UI or client." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="30" y="640" width="470" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="b-system29" value="&lt;b&gt;Model registry&lt;/b&gt;&lt;br&gt;models/registry.yaml&lt;br&gt;&lt;br&gt;base_models per provider plus fine_tunes.&lt;br&gt;The agent YAML model: field points here." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="30" y="790" width="365" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="b-system30" value="&lt;b&gt;Training pipeline&lt;/b&gt;&lt;br&gt;training/&lt;br&gt;&lt;br&gt;datasets to train to eval to model card to registry.&lt;br&gt;See page 4, Training pipeline." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="415" y="790" width="365" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="b-system31" value="&lt;b&gt;Usage analytics&lt;/b&gt;&lt;br&gt;&lt;br&gt;Every call is logged to usage.jsonl&lt;br&gt;(agent, model, latency, tokens).&lt;br&gt;GET /analytics serves the dashboard." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="800" y="790" width="365" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="b-system32" value="&lt;b&gt;Tool sandbox&lt;/b&gt;&lt;br&gt;&lt;br&gt;BOTROPOLIS_WORKSPACE.&lt;br&gt;Shell and file tools run here with a 30s timeout&lt;br&gt;and a destructive-command denylist." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="1185" y="790" width="365" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="n-system36" value="* marks agents with a toolkit: web, shell, or file tools." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="830" y="745" width="430" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="e-system23" value="" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="b-system3" target="b-system5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-system24" value="" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="b-system4" target="b-system5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-system25" value="POST /ask, /team" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="b-system5" target="b-system6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-system26" value="routes to department" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="b-system6" target="b-system7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-system27" value="model call per agent spec" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="b-system7" target="p-system20">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-system33" value="registers" style="endArrow=classic;html=1;dashed=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#888888;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="b-system30" target="b-system29">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-system34" value="logs" style="endArrow=classic;html=1;dashed=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#888888;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="b-system5" target="b-system31">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-system35" value="tool calls" style="endArrow=classic;html=1;dashed=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#888888;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="b-system7" target="b-system32">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="pg-Request-lifecycle" name="Request lifecycle">
+    <mxGraphModel dx="800" dy="500" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="1250" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="t-request1" value="Request lifecycle" style="text;html=1;fontSize=24;fontStyle=1;align=left;" vertex="1" parent="1">
+          <mxGeometry x="30" y="16" width="900" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="t-request2" value="What happens, step by step, when POST /ask hits the server." style="text;html=1;fontSize=12;fontColor=#555555;align=left;" vertex="1" parent="1">
+          <mxGeometry x="30" y="56" width="1200" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="b-request3" value="&lt;b&gt;1. POST /ask arrives&lt;/b&gt;&lt;br&gt;FastAPI validates the AskRequest body {request}.&lt;br&gt;Served by: uvicorn botropolis.server:app" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="200" y="100" width="480" height="96" as="geometry" />
+        </mxCell>
+        <mxCell id="c-request4" value="&lt;b&gt;1&lt;/b&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1a73e8;strokeColor=#1a73e8;fontColor=#ffffff;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="110" y="122" width="46" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="b-request5" value="&lt;b&gt;2. CEO Manoj parses intent&lt;/b&gt;&lt;br&gt;The orchestrator scores the request against per-department keywords and picks the department." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="200" y="216" width="480" height="96" as="geometry" />
+        </mxCell>
+        <mxCell id="c-request6" value="&lt;b&gt;2&lt;/b&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1a73e8;strokeColor=#1a73e8;fontColor=#ffffff;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="110" y="238" width="46" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="b-request7" value="&lt;b&gt;3. Agent selected&lt;/b&gt;&lt;br&gt;Loaded from its YAML spec: name, title, system prompt, model, toolkit.&lt;br&gt;The registry holds all 20 agents." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="200" y="332" width="480" height="104" as="geometry" />
+        </mxCell>
+        <mxCell id="c-request8" value="&lt;b&gt;3&lt;/b&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1a73e8;strokeColor=#1a73e8;fontColor=#ffffff;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="110" y="358" width="46" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="q-request9" value="&lt;b&gt;4. Toolkit check&lt;/b&gt;&lt;br&gt;toolkit empty?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="310" y="456" width="260" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="c-request10" value="&lt;b&gt;4&lt;/b&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1a73e8;strokeColor=#1a73e8;fontColor=#ffffff;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="110" y="492" width="46" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="b-request11" value="&lt;b&gt;Single-shot path&lt;/b&gt;&lt;br&gt;One model call,&lt;br&gt;answer returned." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;" vertex="1" parent="1">
+          <mxGeometry x="30" y="466" width="220" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="b-request12" value="&lt;b&gt;5. ReAct loop: think, act, observe&lt;/b&gt;&lt;br&gt;The model emits ACTION {tool, args}. The tool executes in the sandbox.&lt;br&gt;The result returns as an OBSERVATION (truncated to 2000 chars).&lt;br&gt;Repeat until the model emits FINAL or max_steps (default 8) is hit." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="200" y="606" width="480" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="c-request13" value="&lt;b&gt;5&lt;/b&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1a73e8;strokeColor=#1a73e8;fontColor=#ffffff;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="110" y="662" width="46" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="n-request14" value="Malformed ACTION lines do not crash the loop. The agent gets a corrective OBSERVATION and tries again. Unknown tools fail as failed calls, never as crashes." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="720" y="620" width="340" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="b-request15" value="&lt;b&gt;6. Safety rails on the loop&lt;/b&gt;&lt;br&gt;Workspace confinement (BOTROPOLIS_WORKSPACE), 30s shell timeout,&lt;br&gt;destructive-command denylist, path-escape refusal, observation truncation." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="200" y="796" width="480" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="c-request16" value="&lt;b&gt;6&lt;/b&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1a73e8;strokeColor=#1a73e8;fontColor=#ffffff;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="110" y="830" width="46" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="b-request17" value="&lt;b&gt;7. Usage logged&lt;/b&gt;&lt;br&gt;Agent, model, latency, tokens, success appended to usage.jsonl.&lt;br&gt;Visible at GET /analytics." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="200" y="936" width="480" height="96" as="geometry" />
+        </mxCell>
+        <mxCell id="c-request18" value="&lt;b&gt;7&lt;/b&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1a73e8;strokeColor=#1a73e8;fontColor=#ffffff;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="110" y="958" width="46" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="b-request19" value="&lt;b&gt;8. CEO synthesis&lt;/b&gt;&lt;br&gt;Manoj compiles the agent outputs into a CompanyReport.&lt;br&gt;FastAPI returns it as JSON." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="200" y="1052" width="480" height="104" as="geometry" />
+        </mxCell>
+        <mxCell id="c-request20" value="&lt;b&gt;8&lt;/b&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1a73e8;strokeColor=#1a73e8;fontColor=#ffffff;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="110" y="1078" width="46" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="e-request21" value="" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="b-request3" target="b-request5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-request22" value="" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="b-request5" target="b-request7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-request23" value="" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="b-request7" target="q-request9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-request24" value="empty" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="q-request9" target="b-request11">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-request25" value="has tools" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="q-request9" target="b-request12">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-request26" value="rejoins" style="endArrow=classic;html=1;dashed=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#888888;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="b-request11" target="b-request17">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-request27" value="" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="b-request12" target="b-request15">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-request28" value="" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="b-request15" target="b-request17">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-request29" value="" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="b-request17" target="b-request19">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="pg-Teaming" name="Teaming">
+    <mxGraphModel dx="800" dy="500" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="1150" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="t-teaming1" value="Teaming" style="text;html=1;fontSize=24;fontStyle=1;align=left;" vertex="1" parent="1">
+          <mxGeometry x="30" y="16" width="900" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="t-teaming2" value="How POST /team runs several agents as a collaborating team." style="text;html=1;fontSize=12;fontColor=#555555;align=left;" vertex="1" parent="1">
+          <mxGeometry x="30" y="56" width="1200" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="b-teaming3" value="&lt;b&gt;1. POST /team&lt;/b&gt;&lt;br&gt;Body: {request, agents: [&quot;Arjun&quot;, &quot;Sofia&quot;], rounds}.&lt;br&gt;Ask a named team to collaborate on one request." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="200" y="100" width="480" height="96" as="geometry" />
+        </mxCell>
+        <mxCell id="c-teaming4" value="&lt;b&gt;1&lt;/b&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1a73e8;strokeColor=#1a73e8;fontColor=#ffffff;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="110" y="122" width="46" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="b-teaming5" value="&lt;b&gt;2. Validation&lt;/b&gt;&lt;br&gt;Unknown name returns 404. Empty list returns 400.&lt;br&gt;rounds above 3 returns 422 (pydantic le=3, and the CEO clamps too)." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="200" y="216" width="480" height="104" as="geometry" />
+        </mxCell>
+        <mxCell id="c-teaming6" value="&lt;b&gt;2&lt;/b&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1a73e8;strokeColor=#1a73e8;fontColor=#ffffff;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="110" y="242" width="46" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="b-teaming7" value="&lt;b&gt;3. Round 1&lt;/b&gt;&lt;br&gt;Each agent runs on the original request.&lt;br&gt;Outputs are captured per agent." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="200" y="340" width="480" height="104" as="geometry" />
+        </mxCell>
+        <mxCell id="c-teaming8" value="&lt;b&gt;3&lt;/b&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1a73e8;strokeColor=#1a73e8;fontColor=#ffffff;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="110" y="366" width="46" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="b-teaming9" value="&lt;b&gt;4. Prior outputs shared&lt;/b&gt;&lt;br&gt;Every later prompt carries the original request plus previous teammates'&lt;br&gt;outputs (800 chars each), so the team can draft, critique, and revise." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="200" y="464" width="480" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="c-teaming10" value="&lt;b&gt;4&lt;/b&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1a73e8;strokeColor=#1a73e8;fontColor=#ffffff;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="110" y="493" width="46" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="b-teaming11" value="&lt;b&gt;5. Rounds 2 to N&lt;/b&gt;&lt;br&gt;Agents run again, seeing all prior outputs.&lt;br&gt;Capped at MAX_TEAM_ROUNDS = 3." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="200" y="594" width="480" height="96" as="geometry" />
+        </mxCell>
+        <mxCell id="c-teaming12" value="&lt;b&gt;5&lt;/b&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1a73e8;strokeColor=#1a73e8;fontColor=#ffffff;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="110" y="616" width="46" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="b-teaming13" value="&lt;b&gt;6. CEO synthesis&lt;/b&gt;&lt;br&gt;Manoj reads the final per-agent state and writes the synthesis.&lt;br&gt;It notes when everything ran on the offline stub." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="200" y="710" width="480" height="104" as="geometry" />
+        </mxCell>
+        <mxCell id="c-teaming14" value="&lt;b&gt;6&lt;/b&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1a73e8;strokeColor=#1a73e8;fontColor=#ffffff;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="110" y="736" width="46" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="b-teaming15" value="&lt;b&gt;7. TeamReport JSON&lt;/b&gt;&lt;br&gt;{agents, rounds: [{agent, output}], elapsed, synthesis}&lt;br&gt;returned by the endpoint." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="200" y="834" width="480" height="96" as="geometry" />
+        </mxCell>
+        <mxCell id="c-teaming16" value="&lt;b&gt;7&lt;/b&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1a73e8;strokeColor=#1a73e8;fontColor=#ffffff;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="110" y="856" width="46" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="b-teaming17" value="&lt;b&gt;8. Usage logged&lt;/b&gt;&lt;br&gt;Per-agent usage recorded for every round.&lt;br&gt;Visible at GET /analytics." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="200" y="950" width="480" height="96" as="geometry" />
+        </mxCell>
+        <mxCell id="c-teaming18" value="&lt;b&gt;8&lt;/b&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1a73e8;strokeColor=#1a73e8;fontColor=#ffffff;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="110" y="972" width="46" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="n-teaming19" value="Example: Arjun drafts code, Sofia reviews it, Arjun revises. Each round, each agent sees what the others wrote, so feedback compounds instead of starting over." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="720" y="340" width="340" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="e-teaming20" value="" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="b-teaming3" target="b-teaming5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-teaming21" value="" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="b-teaming5" target="b-teaming7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-teaming22" value="" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="b-teaming7" target="b-teaming9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-teaming23" value="" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="b-teaming9" target="b-teaming11">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-teaming24" value="" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="b-teaming11" target="b-teaming13">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-teaming25" value="" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="b-teaming13" target="b-teaming15">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-teaming26" value="" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="b-teaming15" target="b-teaming17">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="pg-Training-pipeline" name="Training pipeline">
+    <mxGraphModel dx="800" dy="500" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="1050" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="t-training1" value="Training pipeline" style="text;html=1;fontSize=24;fontStyle=1;align=left;" vertex="1" parent="1">
+          <mxGeometry x="30" y="16" width="900" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="t-training2" value="How a Botropolis model goes from dataset to a live agent." style="text;html=1;fontSize=12;fontColor=#555555;align=left;" vertex="1" parent="1">
+          <mxGeometry x="30" y="56" width="1200" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="b-training3" value="&lt;b&gt;1. Dataset&lt;/b&gt;&lt;br&gt;training/datasets/scout_large.jsonl: 2,940 examples, 210 topics,&lt;br&gt;validated with zero errors. Card: scout_large.CARD.md." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="200" y="100" width="480" height="104" as="geometry" />
+        </mxCell>
+        <mxCell id="c-training4" value="&lt;b&gt;1&lt;/b&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1a73e8;strokeColor=#1a73e8;fontColor=#ffffff;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="110" y="126" width="46" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="b-training5" value="&lt;b&gt;2. Train&lt;/b&gt;&lt;br&gt;training/train.py validates a YAML config (model, dataset, epochs,&lt;br&gt;learning rate, batch size) and runs the fine-tune.&lt;br&gt;train_scout_tiny.py trains from scratch; colab_lora.py is the GPU LoRA path." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="200" y="224" width="480" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="c-training6" value="&lt;b&gt;2&lt;/b&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1a73e8;strokeColor=#1a73e8;fontColor=#ffffff;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="110" y="258" width="46" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="b-training7" value="&lt;b&gt;3. Evaluate&lt;/b&gt;&lt;br&gt;training/evaluate.py scores responses and reports validation&lt;br&gt;loss and perplexity." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="200" y="364" width="480" height="104" as="geometry" />
+        </mxCell>
+        <mxCell id="c-training8" value="&lt;b&gt;3&lt;/b&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1a73e8;strokeColor=#1a73e8;fontColor=#ffffff;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="110" y="390" width="46" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="b-training9" value="&lt;b&gt;4. Model card&lt;/b&gt;&lt;br&gt;models/cards/*.md: honest capability notes, metrics, and limits." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="200" y="488" width="480" height="96" as="geometry" />
+        </mxCell>
+        <mxCell id="c-training10" value="&lt;b&gt;4&lt;/b&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1a73e8;strokeColor=#1a73e8;fontColor=#ffffff;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="110" y="510" width="46" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="b-training11" value="&lt;b&gt;5. Registry entry&lt;/b&gt;&lt;br&gt;models/registry.yaml, fine_tunes section: model id, weights path, metrics." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="200" y="604" width="480" height="96" as="geometry" />
+        </mxCell>
+        <mxCell id="c-training12" value="&lt;b&gt;5&lt;/b&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1a73e8;strokeColor=#1a73e8;fontColor=#ffffff;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="110" y="626" width="46" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="b-training13" value="&lt;b&gt;6. Agent binding&lt;/b&gt;&lt;br&gt;Set model: in botropolis/agents/&amp;lt;dept&amp;gt;/&amp;lt;agent&amp;gt;.yaml to the registry id." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="200" y="720" width="480" height="96" as="geometry" />
+        </mxCell>
+        <mxCell id="c-training14" value="&lt;b&gt;6&lt;/b&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1a73e8;strokeColor=#1a73e8;fontColor=#ffffff;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="110" y="742" width="46" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="b-training15" value="&lt;b&gt;7. Serve&lt;/b&gt;&lt;br&gt;The model client resolves the id to a provider (openai, anthropic,&lt;br&gt;google, ollama, stub) and calls it. API keys come from the environment." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="200" y="836" width="480" height="104" as="geometry" />
+        </mxCell>
+        <mxCell id="c-training16" value="&lt;b&gt;7&lt;/b&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1a73e8;strokeColor=#1a73e8;fontColor=#ffffff;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="110" y="862" width="46" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="n-training17" value="Two paths converge here: fine-tune a base model with train.py, or train a tiny model from scratch with train_scout_tiny.py. Both end as registry entries that agents can bind to." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="720" y="224" width="340" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="e-training18" value="" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="b-training3" target="b-training5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-training19" value="" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="b-training5" target="b-training7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-training20" value="" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="b-training7" target="b-training9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-training21" value="" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="b-training9" target="b-training11">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-training22" value="" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="b-training11" target="b-training13">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-training23" value="" style="endArrow=classic;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#333333;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="b-training13" target="b-training15">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
