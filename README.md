@@ -201,6 +201,31 @@ uses it to show tool calls live while the agent works.
 curl -N "http://localhost:8000/agents/Liam/ask/stream?request=List%20the%20workspace%20files"
 ```
 
+## Evals
+
+`botropolis/eval/` holds scenario evals: scripted model conversations
+that check what an agent does with them. Each scenario is a YAML file
+with the agent's toolkit, the task, the canned model replies, and the
+expected output and tool calls:
+
+```bash
+python -m botropolis.eval.runner
+```
+
+```
+[PASS] calculator_two_step
+[PASS] plain_answer_no_tools
+[PASS] unknown_tool_is_refused
+
+3/3 scenarios passed
+```
+
+Scenarios run with no model credentials and no network: the runner
+plays the replies through a real Agent and checks the outcome. Add a
+new file under `botropolis/eval/scenarios/` to cover a behavior you
+care about. A failing scenario exits non-zero with the mismatch
+spelled out.
+
 ## Models
 
 Every agent spec names a model. `models/registry.yaml` is the central

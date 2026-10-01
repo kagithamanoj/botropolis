@@ -1,0 +1,14 @@
+name: unknown_tool_is_refused
+description: The model asks for a tool outside its toolkit; the loop refuses it and the agent still finishes.
+toolkit: [calculator]
+task: Do something with the shell.
+replies:
+  - 'ACTION: {"tool": "shell", "args": {"command": "ls"}}'
+  - "FINAL: I cannot run shell commands with my toolkit."
+expect:
+  output_contains: "cannot run shell"
+  tool_call_count: 1
+  tool_calls:
+    - tool: shell
+      args: {command: "ls"}
+      success: false

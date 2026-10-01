@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 
-from botropolis.core.loop import DEFAULT_MAX_STEPS, run_tool_loop
+from botropolis.core.loop import DEFAULT_MAX_STEPS, parse_model_reply, run_tool_loop
 from botropolis.core.models import ModelClient
 from botropolis.core.schemas import AgentResult, Task
 from botropolis.tools import TOOLS
@@ -88,6 +88,11 @@ class Agent:
             if self.toolkit:
                 return self._run_with_tools(task, started, on_event=on_event)
             output = self.client.chat(self.model, self.build_messages(task))
+            # Same answer semantics as the tool loop: a FINAL: prefix marks
+            # the answer and is stripped, anything else is the answer as-is.
+            kind, parsed = parse_model_reply(output)
+            if kind == "final":
+                output = parsed
             provider = self.client.provider_for(self.model)
             usage = getattr(self.client, "last_usage", None) or {}
             return AgentResult(

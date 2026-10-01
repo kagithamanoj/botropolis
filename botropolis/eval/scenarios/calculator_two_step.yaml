@@ -1,0 +1,16 @@
+name: calculator_two_step
+description: Agent uses the calculator twice in a row, then answers.
+toolkit: [calculator]
+task: What is 6 times 7, then double it?
+replies:
+  - 'ACTION: {"tool": "calculator", "args": {"expression": "6 * 7"}}'
+  - 'ACTION: {"tool": "calculator", "args": {"expression": "42 * 2"}}'
+  - "FINAL: 84"
+expect:
+  output_contains: "84"
+  tool_call_count: 2
+  tool_calls:
+    - tool: calculator
+      args: {expression: "6 * 7"}
+    - tool: calculator
+      args: {expression: "42 * 2"}
