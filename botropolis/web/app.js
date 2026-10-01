@@ -130,7 +130,7 @@
     wrap.className = "msg company";
 
     var html = '<div class="report">';
-    html += '<div class="ceo-label">CEO summary</div>';
+    html += '<div class="ceo-label">Manoj\'s summary</div>';
     html += '<p class="summary">' + esc(report.summary || "Done.") + "</p>";
 
     if (report.departments_involved && report.departments_involved.length) {
@@ -210,7 +210,7 @@
           opt.textContent = a.name + " - " + a.title;
           warroomAgent.appendChild(opt);
         });
-        addWarroomNote("Pick an agent and ask. This goes straight to them, no CEO routing.");
+        addWarroomNote("Pick an agent and ask. This goes straight to them, no routing through Manoj.");
       })
       .catch(function () {
         warroomAgent.innerHTML = "";
@@ -422,7 +422,7 @@
       setStatus("Online - " + data.agents + " agents on staff", "ok");
       var wrap = document.createElement("div");
       wrap.className = "msg company";
-      wrap.innerHTML = '<div class="report"><div class="ceo-label">CEO</div>' +
+      wrap.innerHTML = '<div class="report"><div class="ceo-label">Manoj</div>' +
         '<p class="summary">Welcome to Botropolis. Ask me anything and I will route it ' +
         "to the right departments.</p></div>";
       messagesEl.appendChild(wrap);

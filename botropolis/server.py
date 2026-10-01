@@ -36,7 +36,7 @@ WEB_DIR = Path(__file__).parent / "web"
 
 app = FastAPI(
     title="Botropolis",
-    description="A company of bots: multi-agent departments coordinated by a CEO orchestrator.",
+    description="A company of bots: multi-agent departments coordinated by Manoj, the CEO.",
     version="0.1.0",
 )
 
@@ -82,7 +82,7 @@ app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 
 @app.post("/ask")
 def ask(body: AskRequest) -> dict:
-    """Send a request to the CEO; get back a full CompanyReport."""
+    """Send a request to Manoj (the CEO); get back a full CompanyReport."""
     report = ceo.handle(body.request)
     for result in report.results:
         _record_usage(result)
@@ -106,7 +106,7 @@ def _record_usage(result: AgentResult) -> None:
 
 @app.post("/agents/{name}/ask")
 def ask_agent(name: str, body: AskRequest) -> dict:
-    """Chat with one agent directly, skipping the CEO (war room)."""
+    """Chat with one agent directly, skipping Manoj (war room)."""
     try:
         agent = registry.get(name)
     except KeyError:

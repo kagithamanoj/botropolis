@@ -3,8 +3,8 @@
 **A company of bots.**
 
 Botropolis is a multi-agent framework where specialized AI agents are
-organized like company departments. You ask the CEO for something, the CEO
-breaks it into pieces, and the right departments do the work. Twenty agents
+organized like company departments. You ask Manoj, the CEO, for something,
+he breaks it into pieces, and the right departments do the work. Twenty agents
 across ten departments, one orchestrator, and a training pipeline so each
 agent can eventually get its own fine-tuned model.
 
@@ -16,31 +16,31 @@ This is that idea, in Python.
 
 ```
                         +------------------+
-                        |       CEO        |
-                        |  (orchestrator)  |
+                        |      Manoj       |
+                        |  (CEO, orchestrator)|
                         +--------+---------+
                                  |
         +-----------+------------+------------+------------+
         |           |            |            |            |
     research     health      finance       code         data
    /   |   \    /  |  \       /   \       /  |  \       /   \
- Scout Analyst FactChecker TriageBot WellnessCoach MedResearcher ...
+ Aarav Meera Dev Nina Ravi Lena Omar Priya Arjun Sofia Kabir ...
 ```
 
 Full roster:
 
 | Department | Agents |
 |------------|--------|
-| research   | Scout (web research), Analyst (synthesis), FactChecker (verification) |
-| health     | TriageBot (symptom triage), WellnessCoach (habits), MedResearcher (literature) |
-| finance    | MarketAnalyst (markets), BudgetPlanner (budgeting) |
-| code       | Coder, Reviewer, DevOps |
-| data       | DataEngineer (pipelines), MLEngineer (training and eval) |
-| legal      | Paralegal (research summaries) |
-| marketing  | Copywriter, SEOAnalyst |
-| ops        | Scheduler, InboxAssistant |
-| security   | SecAuditor |
-| support    | SupportAgent |
+| research   | Aarav (web research), Meera (synthesis), Dev (verification) |
+| health     | Nina (symptom triage), Ravi (habits), Lena (literature) |
+| finance    | Priya (markets), Omar (budgeting) |
+| code       | Arjun, Sofia, Kabir |
+| data       | Vikram (pipelines), Elena (training and eval) |
+| legal      | Raj (research summaries) |
+| marketing  | Zara, Lila |
+| ops        | Kofi, Anya |
+| security   | Ishaan |
+| support    | Tara |
 
 Health and legal agents carry explicit disclaimers in their prompts. They
 give guidance and summaries, not diagnoses or legal advice.
@@ -62,7 +62,7 @@ offline reasoning that is clearly labeled as such:
 python examples/demo.py
 ```
 
-Ask the CEO anything:
+Ask Manoj anything:
 
 ```python
 from botropolis.core.orchestrator import CEO
@@ -90,15 +90,15 @@ uvicorn botropolis.server:app --reload
 # open http://localhost:8000
 ```
 
-Three tabs. Chat talks to the CEO: you ask, it routes to departments, and
+Three tabs. Chat talks to Manoj: you ask, he routes to departments, and
 you get the summary plus one card per agent that did work. War room lets
-you pick one agent and talk to it directly, skipping the CEO.
+you pick one agent and talk to it directly, skipping Manoj.
 Analytics shows per-agent usage: calls, average latency, and tokens used.
 Outputs from the offline stub are labeled as such, and stub runs report
 0 tokens. Roster shows every department and
 agent with their specs, tools, and example tasks.
 
-Every agent invocation, through the CEO or the war room, is appended to
+Every agent invocation, through Manoj or the war room, is appended to
 `botropolis/data/usage.jsonl` (gitignored). `GET /analytics` returns the
 per-agent totals from that log.
 
@@ -107,13 +107,13 @@ per-agent totals from that log.
 One agent working alone is fine. A team is better. `POST /team` runs named
 agents in collaboration rounds: each agent's prompt includes the original
 request plus everything its teammates produced before it, so the team can
-draft, critique, and revise. The CEO then writes a short synthesis of the
+draft, critique, and revise. Manoj then writes a short synthesis of the
 final state.
 
 ```bash
 curl -X POST http://localhost:8000/team \
   -H "Content-Type: application/json" \
-  -d '{"request": "Write a Python retry helper", "agents": ["Coder", "Reviewer"], "rounds": 2}'
+  -d '{"request": "Write a Python retry helper", "agents": ["Arjun", "Sofia"], "rounds": 2}'
 ```
 
 Rounds are capped at 3. Unknown agent names return 404. Team runs are
@@ -131,9 +131,9 @@ toolkit:
   - web_fetch
 ```
 
-Current toolkits: Scout and FactChecker get web search and fetch; Coder
-gets shell plus file tools; Reviewer gets file reading; DataEngineer and
-MLEngineer get shell, file tools, and the calculator. Every other agent
+Current toolkits: Aarav and Dev get web search and fetch; Arjun
+gets shell plus file tools; Sofia gets file reading; Vikram and
+Elena get shell, file tools, and the calculator. Every other agent
 has no toolkit and behaves exactly as before: one model call, one answer.
 
 When an agent has a toolkit, it runs a think-act-observe loop instead of
@@ -205,7 +205,7 @@ a card in `models/cards/`. There is a template plus a filled example.
 
 ```
 botropolis/
-  core/        agent base class, registry, CEO orchestrator, model client
+  core/        agent base class, registry, Manoj (CEO orchestrator), model client
   agents/      one folder per department, one YAML spec per agent
   tools/       shared tools agents can call
   server.py    FastAPI: POST /ask, POST /agents/{name}/ask, POST /team, GET /agents, GET /departments, GET /analytics
