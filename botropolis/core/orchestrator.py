@@ -89,10 +89,13 @@ HISTORY_TURNS = 10
 HISTORY_TURN_CHARS = 500
 
 
-def _history_context(
+def history_context(
     history: Optional[List[Dict[str, str]]],
 ) -> Dict[str, str]:
-    """Pack recent chat turns into task context. Empty dict when none."""
+    """Pack recent chat turns into task context. Empty dict when none.
+
+    Public so the server can attach history to single-agent tasks too.
+    """
     if not history:
         return {}
     lines = []
@@ -156,7 +159,7 @@ class CEO:
             departments = ["research"] if "research" in self.registry.departments else [
                 self.registry.departments[0]
             ]
-        context = _history_context(history)
+        context = history_context(history)
         tasks = []
         for dept in departments:
             focus = f" (focus: {request[:80]})" if len(departments) > 1 else ""

@@ -32,7 +32,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from botropolis.core import usage
-from botropolis.core.orchestrator import CEO, MAX_TEAM_ROUNDS
+from botropolis.core.orchestrator import CEO, MAX_TEAM_ROUNDS, history_context
 from botropolis.core.registry import AgentRegistry
 from botropolis.core.schemas import AgentResult, Task
 
@@ -129,12 +129,48 @@ def ask_agent(name: str, body: AskRequest) -> dict:
         agent = registry.get(name)
     except KeyError:
         raise HTTPException(status_code=404, detail=f"Unknown agent: {name}")
-    result = agent.run(body.request)
+    history = [turn.model_dump() for turn in body.history]
+    result = agent.run(_agent_task(agent, body.request, history))
     _record_usage(result)
     return result.to_dict()
 
 
-def _agent_event_stream(agent, request_text: str) -> Iterator[str]:
+def _agent_task(agent, request_text: str, history: list) -> Task:
+    """Build a Task for a direct agent chat, with history as context."""
+    return Task(
+        description=request_text,
+        department=agent.department,
+        agent_name=agent.name,
+        context=history_context(history),
+    )
+
+
+def _parse_history_param(raw: str) -> list:
+    """Parse the JSON-encoded history query param. Never raises."""
+    try:
+        turns = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return []
+    clean = []
+    if isinstance(turns, list):
+        for turn in turns[-20:]:
+            if (
+                isinstance(turn, dict)
+                and turn.get("role") in ("user", "assistant")
+                and turn.get("content")
+            ):
+                clean.append(
+                    {
+                        "role": turn["role"],
+                        "content": str(turn["content"])[:4000],
+                    }
+                )
+    return clean
+
+
+def _agent_event_stream(
+    agent, request_text: str, history: list | None = None
+) -> Iterator[str]:
     """Yield server-sent events while one agent works.
 
     Events: tool_started, tool_finished, result, failed, done.
@@ -149,11 +185,7 @@ def _agent_event_stream(agent, request_text: str) -> Iterator[str]:
 
     def runner() -> None:
         try:
-            task = Task(
-                description=request_text,
-                department=agent.department,
-                agent_name=agent.name,
-            )
+            task = _agent_task(agent, request_text, history)
             result = agent.run(task, on_event=on_event)
             _record_usage(result)
             events.put(("result", result.to_dict()))
@@ -174,7 +206,12 @@ def _agent_event_stream(agent, request_text: str) -> Iterator[str]:
 
 @app.get("/agents/{name}/ask/stream")
 def ask_agent_stream(
-    name: str, request: str = Query(..., min_length=1)
+    name: str,
+    request: str = Query(..., min_length=1),
+    history: str = Query(
+        default="[]",
+        description="JSON-encoded earlier chat turns, oldest first",
+    ),
 ) -> StreamingResponse:
     """Chat with one agent and stream its tool calls as server-sent events.
 
@@ -186,7 +223,7 @@ def ask_agent_stream(
     except KeyError:
         raise HTTPException(status_code=404, detail=f"Unknown agent: {name}")
     return StreamingResponse(
-        _agent_event_stream(agent, request),
+        _agent_event_stream(agent, request, history=_parse_history_param(history)),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache"},
     )

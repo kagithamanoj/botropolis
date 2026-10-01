@@ -352,6 +352,20 @@
 
   /* ---- War room: direct chat with one agent ---- */
 
+  /* Per-agent conversation memory, mirroring the chat tab. Reset when
+     the picked agent changes. */
+  var warroomHistory = [];
+  var WARROOM_HISTORY_TURNS = 10;
+
+  function pushWarroomTurn(role, content) {
+    warroomHistory.push({ role: role, content: content });
+    while (warroomHistory.length > WARROOM_HISTORY_TURNS) warroomHistory.shift();
+  }
+
+  warroomAgent.addEventListener("change", function () {
+    warroomHistory = [];
+  });
+
   function loadWarroomAgents() {
     fetch("/agents")
       .then(function (resp) { return resp.json(); })
@@ -417,7 +431,9 @@
     var finished = false;
 
     var src = new EventSource("/agents/" + encodeURIComponent(name) +
-      "/ask/stream?request=" + encodeURIComponent(text));
+      "/ask/stream?request=" + encodeURIComponent(text) +
+      "&history=" + encodeURIComponent(JSON.stringify(warroomHistory)));
+    pushWarroomTurn("user", text);
 
     function close() {
       if (!finished) {
@@ -461,7 +477,9 @@
 
     src.addEventListener("result", function (e) {
       liveWrap.remove();
-      addWarroomResult(name, JSON.parse(e.data));
+      var r = JSON.parse(e.data);
+      addWarroomResult(name, r);
+      pushWarroomTurn("assistant", r.output || "Done.");
       close();
     });
 
