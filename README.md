@@ -2,15 +2,47 @@
 
 **A company of bots.**
 
-Botropolis is a multi-agent framework where specialized AI agents are
-organized like company departments. You ask Manoj, the CEO, for something,
-he breaks it into pieces, and the right departments do the work. Twenty agents
-across ten departments, one orchestrator, and a training pipeline so each
-agent can eventually get its own fine-tuned model.
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
+[![GitHub stars](https://img.shields.io/github/stars/kagithamanoj/botropolis.svg)](https://github.com/kagithamanoj/botropolis/stargazers)
 
-I built this because most agent frameworks feel like a pile of scripts.
-Companies have an org chart for a reason: it makes clear who does what.
-This is that idea, in Python.
+Most agent frameworks hand you a pile of scripts and wish you luck.
+Botropolis hands you an org chart. Twenty specialist agents across ten
+departments, one CEO orchestrator who breaks your request into pieces and
+routes the work, and a training pipeline so each agent can eventually get
+its own fine-tuned model.
+
+It runs with no API keys. It serves a web UI from the same process. And
+every agent calls real tools through a plain-text protocol that works with
+any model, including small local ones.
+
+## Why Botropolis instead of CrewAI / LangGraph / AutoGen?
+
+Those are excellent general toolkits. Botropolis is an opinionated
+starting point rather than a blank canvas:
+
+- **Structure over scripts.** Agents have job titles, departments, and
+  example tasks in plain YAML. You always know who does what, the way an
+  org chart tells you who owns what.
+- **Zero keys to start.** Everything runs against an offline stub that
+  labels its output honestly. Clone it, run the demo, see the whole
+  system work before you spend a cent on API calls.
+- **No provider lock-in on tools.** The think-act-observe loop is plain
+  text (`ACTION:` / `FINAL:`), not vendor function calling. It works with
+  OpenAI, Anthropic, Gemini, Ollama, or a fine-tune you trained yourself.
+- **Training is a first-class citizen.** A model registry, dataset format,
+  eval harness, and model cards ship in the repo. The path from agent spec
+  to fine-tuned model is documented, not an afterthought.
+- **A UI with no build step.** Plain HTML/CSS/JS served by the same
+  FastAPI process. Chat, teaming war room, live tool-call streaming,
+  analytics, roster. Open `localhost:8000` and it works, even on a phone.
+
+## Demo
+
+<!-- TODO: 60-second screen recording of the web UI: ask Manoj a question, watch departments work, show the teaming tab. Replace this comment with the GIF/video. -->
+
+The fastest way to see it: `python examples/demo.py` runs the whole
+company with no API keys.
 
 ## Org chart
 
@@ -312,13 +344,25 @@ Details in `docs/adding-agents.md`.
 
 ## Roadmap
 
-- Real tool execution wired into the model clients (function calling)
-- Conversation memory per agent
-- Department-level fine-tunes registered with eval scores
+- Department-level fine-tunes registered with eval scores (Scout-tiny was
+  the first proof of concept: a 5.49M-parameter transformer trained from
+  scratch; next is LoRA on a small open model)
 - Nightly eval runs in CI
+- A hosted demo you can try without cloning
+- More departments: the org chart grows by pull request
 
 Done:
 - A simple web UI on top of the API server
+- Plain-text tool protocol with live streaming
+- Scenario evals that run with no keys and no network
+
+## Contributing
+
+The org chart grows by pull request. To add an agent, copy a spec under
+`botropolis/agents/`, edit the YAML, and run `pytest`. Details in
+`docs/adding-agents.md`. Bug reports and ideas are welcome as issues.
+If you use Botropolis for something real, tell me. I would love to hear
+about it.
 
 ## License
 
