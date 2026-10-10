@@ -5,7 +5,7 @@ task: What is 6 times 7, then double it?
 replies:
   - 'ACTION: {"tool": "calculator", "args": {"expression": "6 * 7"}}'
   - 'ACTION: {"tool": "calculator", "args": {"expression": "42 * 2"}}'
-  - "FINAL: 84"
+  - "FINAL: {\"summary\": \"84\", \"details\": \"6 times 7 is 42, doubled is 84.\", \"key_points\": []}"
 expect:
   output_contains: "84"
   tool_call_count: 2

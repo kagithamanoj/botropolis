@@ -16,6 +16,14 @@ import yaml
 
 from botropolis.core.loop import DEFAULT_MAX_STEPS, parse_model_reply, run_tool_loop
 from botropolis.core.models import ModelClient
+from botropolis.core.output_schemas import (
+    AgentOutput,
+    OutputValidationError,
+    format_instruction,
+    parse_structured_output,
+    resolve_output_schema,
+    validated_dump,
+)
 from botropolis.core.schemas import AgentResult, Task
 from botropolis.tools import TOOLS
 
@@ -59,17 +67,83 @@ class Agent:
             )
         self.example_tasks: List[str] = list(spec.get("example_tasks", []))
         self.client = client or ModelClient()
+        # Output contract: the shape this agent's answer must take.
+        # Explicit `output_schema` in the spec wins; otherwise the
+        # department default applies. Unknown names fail here, at load
+        # time, not mid-run.
+        self.output_schema_name, self.output_schema = resolve_output_schema(
+            spec.get("output_schema"), self.department
+        )
 
     def build_messages(self, task: Task) -> List[Dict[str, str]]:
-        """Compose the system and user messages for a task."""
+        """Compose the system and user messages for a task.
+
+        The user message ends with the output contract: the model must
+        answer as JSON matching the agent's declared schema, so the
+        answer is machine-checkable downstream.
+        """
         user_content = f"Task: {task.description}"
         if task.context:
             context_lines = "\n".join(f"- {k}: {v}" for k, v in task.context.items())
             user_content += f"\n\nContext:\n{context_lines}"
+        user_content += f"\n\nOutput format:\n{format_instruction(self.output_schema)}"
         return [
             {"role": "system", "content": self.system_prompt},
             {"role": "user", "content": user_content},
         ]
+
+    def _contract_output(
+        self, raw_text: str, base_messages: List[Dict[str, str]]
+    ) -> tuple[str, Dict[str, Any]]:
+        """Validate raw model text against the agent's output schema.
+
+        Returns (human-readable output, structured dict). The offline
+        stub skips validation: its output is labeled offline prose, not
+        a model answer, so it is wrapped as the summary verbatim.
+
+        On validation failure the model gets exactly one repair attempt
+        with the errors spelled out. If the repair also fails, raises
+        OutputValidationError, which run() turns into a failed
+        AgentResult. A failed contract is reported, never silently
+        passed through as good output.
+        """
+        provider = self.client.provider_for(self.model)
+        if provider == "stub":
+            text = raw_text.strip()
+            wrapped = self.output_schema(summary=text or "(no output)")
+            return text, validated_dump(wrapped)
+        try:
+            model = parse_structured_output(raw_text, self.output_schema)
+        except OutputValidationError as first:
+            repair_messages = base_messages + [
+                {"role": "assistant", "content": raw_text},
+                {
+                    "role": "user",
+                    "content": (
+                        "Your last reply did not match the required output schema:\n"
+                        f"{first}\n"
+                        "Reply with ONLY a corrected JSON object matching the schema."
+                    ),
+                },
+            ]
+            repaired = self.client.chat(self.model, repair_messages)
+            kind, parsed = parse_model_reply(repaired)
+            if kind == "final":
+                repaired = parsed
+            model = parse_structured_output(repaired, self.output_schema)
+        return self._render_output(model), validated_dump(model)
+
+    @staticmethod
+    def _render_output(model: AgentOutput) -> str:
+        """Render a validated answer as human-readable prose.
+
+        Summary first, details after. This keeps `output` readable for
+        the CEO, team context, and the API while `structured` carries
+        the machine-checked contract.
+        """
+        if model.details.strip():
+            return f"{model.summary.strip()}\n\n{model.details.strip()}"
+        return model.summary.strip()
 
     def run(self, task: Task | str, on_event=None) -> AgentResult:
         """Run one task and return an AgentResult.
@@ -88,12 +162,14 @@ class Agent:
         try:
             if self.toolkit:
                 return self._run_with_tools(task, started, on_event=on_event)
-            output = self.client.chat(self.model, self.build_messages(task))
+            messages = self.build_messages(task)
+            raw = self.client.chat(self.model, messages)
             # Same answer semantics as the tool loop: a FINAL: prefix marks
             # the answer and is stripped, anything else is the answer as-is.
-            kind, parsed = parse_model_reply(output)
+            kind, parsed = parse_model_reply(raw)
             if kind == "final":
-                output = parsed
+                raw = parsed
+            output, structured = self._contract_output(raw, messages)
             provider = self.client.provider_for(self.model)
             usage = getattr(self.client, "last_usage", None) or {}
             return AgentResult(
@@ -101,6 +177,7 @@ class Agent:
                 department=self.department,
                 task_id=task.id,
                 output=output,
+                structured=structured,
                 success=True,
                 confidence=0.85 if provider != "stub" else 0.5,
                 metadata={
@@ -109,6 +186,8 @@ class Agent:
                     "stub": provider == "stub",
                     "tokens_in": int(usage.get("input", 0)),
                     "tokens_out": int(usage.get("output", 0)),
+                    "output_schema": self.output_schema_name,
+                    "output_validated": provider != "stub",
                 },
                 elapsed_seconds=time.time() - started,
             )
@@ -126,14 +205,21 @@ class Agent:
             )
 
     def _run_with_tools(self, task: Task, started: float, on_event=None) -> AgentResult:
-        """Run the think-act-observe loop and wrap it in an AgentResult."""
-        output, tool_calls, usage = run_tool_loop(self, task, on_event=on_event)
+        """Run the think-act-observe loop and wrap it in an AgentResult.
+
+        The loop's final answer goes through the same output contract
+        as the single-shot path: validated against the schema, one
+        repair attempt on failure.
+        """
+        raw_output, tool_calls, usage = run_tool_loop(self, task, on_event=on_event)
+        output, structured = self._contract_output(raw_output, self.build_messages(task))
         provider = self.client.provider_for(self.model)
         return AgentResult(
             agent_name=self.name,
             department=self.department,
             task_id=task.id,
             output=output,
+            structured=structured,
             success=True,
             confidence=0.85 if provider != "stub" else 0.5,
             metadata={
@@ -144,6 +230,8 @@ class Agent:
                 "tokens_out": int(usage.get("output", 0)),
                 "toolkit": self.toolkit,
                 "tool_calls": len(tool_calls),
+                "output_schema": self.output_schema_name,
+                "output_validated": provider != "stub",
             },
             elapsed_seconds=time.time() - started,
             tool_calls=tool_calls,
@@ -159,5 +247,6 @@ class Agent:
             "model": self.model,
             "tools": self.toolkit,
             "toolkit": self.toolkit,
+            "output_schema": self.output_schema_name,
             "example_tasks": self.example_tasks,
         }

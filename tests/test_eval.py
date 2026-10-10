@@ -11,7 +11,7 @@ def _scenario(**overrides):
         "name": "demo",
         "toolkit": ["calculator"],
         "task": "do math",
-        "replies": ["FINAL: done"],
+        "replies": ['FINAL: {"summary": "done", "details": "", "key_points": []}'],
         "expect": {"output_contains": "done"},
     }
     base.update(overrides)
@@ -35,7 +35,7 @@ def test_tool_call_mismatch_is_reported():
     scenario = _scenario(
         replies=[
             'ACTION: {"tool": "calculator", "args": {"expression": "1 + 1"}}',
-            "FINAL: 2",
+            'FINAL: {"summary": "2", "details": "", "key_points": []}',
         ],
         expect={
             "tool_calls": [

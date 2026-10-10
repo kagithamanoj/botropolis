@@ -3,7 +3,7 @@ description: An agent with no toolkit answers directly from the reply.
 toolkit: []
 task: Say hello.
 replies:
-  - "FINAL: Hello there."
+  - "FINAL: {\"summary\": \"Hello there.\", \"details\": \"\", \"key_points\": []}"
 expect:
   output_equals: "Hello there."
   tool_call_count: 0

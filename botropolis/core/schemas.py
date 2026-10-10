@@ -44,7 +44,13 @@ class ToolCall:
 
 @dataclass
 class AgentResult:
-    """The outcome of one agent running one task."""
+    """The outcome of one agent running one task.
+
+    output is the human-readable answer (summary plus details).
+    structured holds the same answer as validated data against the
+    agent's declared output schema; empty when the provider is the
+    offline stub, which skips validation.
+    """
 
     agent_name: str
     department: str
@@ -56,6 +62,7 @@ class AgentResult:
     metadata: Dict[str, Any] = field(default_factory=dict)
     elapsed_seconds: float = 0.0
     tool_calls: List[ToolCall] = field(default_factory=list)
+    structured: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         """Return a JSON-serializable dict."""

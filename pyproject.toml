@@ -13,6 +13,7 @@ authors = [{ name = "Manoj Kumar" }]
 keywords = ["agents", "multi-agent", "llm", "orchestration", "ai"]
 dependencies = [
     "pyyaml",
+    "pydantic",
     "requests",
     "fastapi",
     "uvicorn",

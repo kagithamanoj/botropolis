@@ -19,6 +19,9 @@ title: Travel Planning Specialist
 department: ops                # must match the directory name
 specialty: Building practical trip itineraries within a budget
 model: gpt-4o                  # a model id from models/registry.yaml
+output_schema: research_output # typed answer contract; validated with
+                              # Pydantic, one repair retry on failure.
+                              # Omit for the department default.
 toolkit:                       # tools the agent may actually call;
   - web_search                 # empty or omitted means one model call,
   - calculator                 # no tool loop
@@ -63,7 +66,21 @@ python -m pytest tests/test_registry.py -q
 If you want to add an agent from code instead of a file, see
 `examples/add_agent.py`.
 
-## 5. Wire it into routing (optional)
+## 5. Pick an output schema (optional)
+
+Every agent answers against a typed contract. The framework asks the
+model for JSON matching the schema, validates it with Pydantic, and
+gives the model one repair attempt with the errors spelled out when it
+does not match. A twice-failed answer becomes a failed result, never
+silent garbage.
+
+Available schemas live in `botropolis/core/output_schemas.py`:
+`agent_output` (default), `research_output`, `code_output`,
+`recommendation_output`. Omit `output_schema` from the spec to take
+the department default. Every schema requires only `summary`; the
+rest is optional, so a short valid answer never fails for being short.
+
+## 6. Wire it into routing (optional)
 
 If the CEO should route requests to the new agent, check two maps in
 `botropolis/core/orchestrator.py`:

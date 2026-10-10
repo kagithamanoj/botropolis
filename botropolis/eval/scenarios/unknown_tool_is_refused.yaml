@@ -4,7 +4,7 @@ toolkit: [calculator]
 task: Do something with the shell.
 replies:
   - 'ACTION: {"tool": "shell", "args": {"command": "ls"}}'
-  - "FINAL: I cannot run shell commands with my toolkit."
+  - "FINAL: {\"summary\": \"I cannot run shell commands with my toolkit.\", \"details\": \"\", \"key_points\": []}"
 expect:
   output_contains: "cannot run shell"
   tool_call_count: 1
