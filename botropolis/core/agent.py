@@ -84,7 +84,9 @@ class Agent:
         """
         user_content = f"Task: {task.description}"
         if task.context:
-            context_lines = "\n".join(f"- {k}: {v}" for k, v in task.context.items())
+            context_lines = "\n".join(
+                f"- {k}: {v}" for k, v in task.context.to_dict().items()
+            )
             user_content += f"\n\nContext:\n{context_lines}"
         user_content += f"\n\nOutput format:\n{format_instruction(self.output_schema)}"
         return [

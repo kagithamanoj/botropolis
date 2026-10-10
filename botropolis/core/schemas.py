@@ -13,18 +13,54 @@ import uuid
 
 
 @dataclass
+class Context:
+    """Everything an agent may know beyond the task description.
+
+    Typed and inspectable: the keys are declared here, not scattered
+    across format strings in the orchestrator. Serializes to a plain
+    dict (empty fields omitted) for prompts, the API, and logs.
+
+    chat_history: recent conversation turns, packed as "role: content"
+    lines, so follow-up questions resolve.
+    teammates_so_far: earlier teammates' outputs in team mode, so
+    later turns can build on, critique, or revise.
+    extra: escape hatch for future context kinds. Prefer a named field.
+    """
+
+    chat_history: str = ""
+    teammates_so_far: str = ""
+    extra: Dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Non-empty fields as a plain dict."""
+        data: Dict[str, Any] = {}
+        if self.chat_history:
+            data["chat_history"] = self.chat_history
+        if self.teammates_so_far:
+            data["teammates_so_far"] = self.teammates_so_far
+        data.update(self.extra)
+        return data
+
+    def __bool__(self) -> bool:
+        """A context with nothing in it counts as absent."""
+        return bool(self.to_dict())
+
+
+@dataclass
 class Task:
     """A unit of work assigned to one agent."""
 
     description: str
     department: Optional[str] = None
     agent_name: Optional[str] = None
-    context: Dict[str, Any] = field(default_factory=dict)
+    context: Context = field(default_factory=Context)
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:8])
 
     def to_dict(self) -> Dict[str, Any]:
         """Return a JSON-serializable dict."""
-        return asdict(self)
+        data = asdict(self)
+        data["context"] = self.context.to_dict()
+        return data
 
 
 @dataclass

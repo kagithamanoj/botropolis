@@ -13,7 +13,14 @@ from typing import Dict, List, Optional, Tuple
 from botropolis.core.agent import Agent
 from botropolis.core.models import ModelClient
 from botropolis.core.registry import AgentRegistry
-from botropolis.core.schemas import AgentResult, CompanyReport, Task, TeamReport, TeamRound
+from botropolis.core.schemas import (
+    AgentResult,
+    CompanyReport,
+    Context,
+    Task,
+    TeamReport,
+    TeamRound,
+)
 
 # Keywords that suggest a department should be involved. Ordered by
 # department so routing is deterministic.
@@ -91,13 +98,13 @@ HISTORY_TURN_CHARS = 500
 
 def history_context(
     history: Optional[List[Dict[str, str]]],
-) -> Dict[str, str]:
-    """Pack recent chat turns into task context. Empty dict when none.
+) -> Context:
+    """Pack recent chat turns into a Context. Empty Context when none.
 
     Public so the server can attach history to single-agent tasks too.
     """
     if not history:
-        return {}
+        return Context()
     lines = []
     for turn in history[-HISTORY_TURNS:]:
         role = turn.get("role", "user")
@@ -105,8 +112,8 @@ def history_context(
         if content:
             lines.append(f"{role}: {content}")
     if not lines:
-        return {}
-    return {"chat_history": "\n".join(lines)}
+        return Context()
+    return Context(chat_history="\n".join(lines))
 
 
 class CEO:
@@ -167,7 +174,7 @@ class CEO:
                 Task(
                     description=f"{request}{focus}",
                     department=dept,
-                    context=dict(context),
+                    context=context,
                 )
             )
         return tasks
@@ -265,15 +272,15 @@ class CEO:
             elapsed_seconds=time.time() - started,
         )
 
-    def _team_context(self, prior: List[Tuple[int, str, str]]) -> Dict[str, str]:
-        """Pack earlier teammates' outputs into task context."""
+    def _team_context(self, prior: List[Tuple[int, str, str]]) -> Context:
+        """Pack earlier teammates' outputs into a Context."""
         if not prior:
-            return {}
+            return Context()
         chunks = []
         for round_num, agent_name, output in prior:
             snippet = output.strip()[:PRIOR_OUTPUT_CHARS]
             chunks.append(f"[round {round_num} - {agent_name}]\n{snippet}")
-        return {"teammates_so_far": "\n\n".join(chunks)}
+        return Context(teammates_so_far="\n\n".join(chunks))
 
     def _synthesize_team(
         self, request: str, agents: List[Agent], team_rounds: List[TeamRound]

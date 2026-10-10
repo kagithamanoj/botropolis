@@ -116,7 +116,7 @@ def test_agent_task_carries_history():
         [{"role": "user", "content": "What is 2+2?"}],
     )
     assert task.agent_name == "DevOps"
-    assert "user: What is 2+2?" in task.context.get("chat_history", "")
+    assert "user: What is 2+2?" in task.context.chat_history
 
 
 def test_parse_history_param():
