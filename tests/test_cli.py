@@ -8,7 +8,7 @@ from botropolis.cli import build_parser, main
 def test_roster_lists_all_twenty(capsys):
     assert main(["roster"]) == 0
     out = capsys.readouterr().out
-    assert "Coder" in out
+    assert "coder" in out
     assert "Inbox" in out
     assert len(out.strip().splitlines()) == 20
 
@@ -16,8 +16,8 @@ def test_roster_lists_all_twenty(capsys):
 def test_roster_filters_by_department(capsys):
     assert main(["roster", "--department", "ops"]) == 0
     out = capsys.readouterr().out
-    assert "Inbox" in out and "Scheduler" in out
-    assert "Coder" not in out
+    assert "inbox" in out and "scheduler" in out
+    assert "coder" not in out
 
 
 def test_roster_unknown_department_fails(capsys):
@@ -30,12 +30,12 @@ def test_ask_unknown_agent_fails(capsys):
 
 
 def test_ask_runs_agent(capsys):
-    assert main(["ask", "Coder", "say hi"]) == 0
+    assert main(["ask", "coder", "say hi"]) == 0
     assert capsys.readouterr().out.strip() != ""
 
 
 def test_team_runs_and_prints_synthesis(capsys):
-    assert main(["team", "say hi", "Coder", "Reviewer", "--rounds", "1"]) == 0
+    assert main(["team", "say hi", "coder", "reviewer", "--rounds", "1"]) == 0
     out = capsys.readouterr().out
     assert "Team request: say hi" in out
 

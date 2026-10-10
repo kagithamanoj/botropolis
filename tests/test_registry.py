@@ -62,8 +62,8 @@ def test_required_spec_fields(registry):
 
 
 def test_get_is_case_insensitive(registry):
-    assert registry.get("scout").name == "Scout"
-    assert registry.get("SCOUT").name == "Scout"
+    assert registry.get("scout").name == "scout"
+    assert registry.get("SCOUT").name == "scout"
 
 
 def test_get_unknown_raises(registry):

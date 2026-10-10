@@ -116,7 +116,7 @@ def test_raising_on_event_does_not_break_loop(tmp_path):
 
 
 def test_stream_endpoint_emits_result_and_done():
-    resp = client.get("/agents/Coder/ask/stream", params={"request": "hello"})
+    resp = client.get("/agents/coder/ask/stream", params={"request": "hello"})
     assert resp.status_code == 200
     assert "text/event-stream" in resp.headers["content-type"]
     kinds = [
@@ -132,7 +132,7 @@ def test_stream_endpoint_emits_result_and_done():
         lines = block.splitlines()
         if lines[0] == "event: result":
             payload = json.loads(lines[1].split("data: ", 1)[1])
-            assert payload["agent_name"] == "Coder"
+            assert payload["agent_name"] == "coder"
             assert payload["success"] is True
 
 
@@ -142,7 +142,7 @@ def test_stream_endpoint_unknown_agent_404():
 
 
 def test_stream_endpoint_rejects_empty_request():
-    resp = client.get("/agents/Coder/ask/stream", params={"request": ""})
+    resp = client.get("/agents/coder/ask/stream", params={"request": ""})
     assert resp.status_code == 422
 
 

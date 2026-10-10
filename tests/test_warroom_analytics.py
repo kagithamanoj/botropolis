@@ -18,10 +18,10 @@ def test_stub_reports_zero_token_usage():
 
 def test_war_room_ask_returns_agent_result(monkeypatch, tmp_path):
     monkeypatch.setattr(usage, "LOG_PATH", tmp_path / "usage.jsonl")
-    resp = client.post("/agents/Scout/ask", json={"request": "what is TCP?"})
+    resp = client.post("/agents/scout/ask", json={"request": "what is TCP?"})
     assert resp.status_code == 200
     body = resp.json()
-    assert body["agent_name"] == "Scout"
+    assert body["agent_name"] == "scout"
     assert body["success"] is True
     assert body["output"]
     assert body["metadata"]["tokens_in"] == 0
@@ -35,9 +35,9 @@ def test_war_room_ask_unknown_agent_404():
 
 def test_war_room_ask_logs_usage(monkeypatch, tmp_path):
     monkeypatch.setattr(usage, "LOG_PATH", tmp_path / "usage.jsonl")
-    client.post("/agents/Coder/ask", json={"request": "write a loop"})
+    client.post("/agents/coder/ask", json={"request": "write a loop"})
     summary = usage.get_summary()
-    assert summary["agents"]["Coder"]["calls"] == 1
+    assert summary["agents"]["coder"]["calls"] == 1
     assert summary["totals"]["stub_calls"] == 1
 
 
@@ -51,18 +51,18 @@ def test_ask_logs_usage(monkeypatch, tmp_path):
 
 def test_usage_summary_aggregates(monkeypatch, tmp_path):
     monkeypatch.setattr(usage, "LOG_PATH", tmp_path / "usage.jsonl")
-    usage.log_invocation("Scout", "research", "stub", "stub", 12.5, 0, 0, True)
-    usage.log_invocation("Scout", "research", "stub", "stub", 7.5, 0, 0, True,
+    usage.log_invocation("scout", "research", "stub", "stub", 12.5, 0, 0, True)
+    usage.log_invocation("scout", "research", "stub", "stub", 7.5, 0, 0, True,
                          tool_calls=3, tool_names=["web_search", "calculator", "web_search"])
-    usage.log_invocation("Coder", "code", "gpt-4o", "openai", 100.0, 50, 20, True)
+    usage.log_invocation("coder", "code", "gpt-4o", "openai", 100.0, 50, 20, True)
     summary = usage.get_summary()
-    assert summary["agents"]["Scout"]["calls"] == 2
-    assert summary["agents"]["Scout"]["avg_latency_ms"] == 10.0
-    assert summary["agents"]["Scout"]["tool_calls"] == 3
-    assert summary["agents"]["Scout"]["tools"] == {"web_search": 2, "calculator": 1}
-    assert summary["agents"]["Coder"]["tokens_total"] == 70
-    assert summary["agents"]["Coder"]["tool_calls"] == 0
-    assert summary["agents"]["Coder"]["tools"] == {}
+    assert summary["agents"]["scout"]["calls"] == 2
+    assert summary["agents"]["scout"]["avg_latency_ms"] == 10.0
+    assert summary["agents"]["scout"]["tool_calls"] == 3
+    assert summary["agents"]["scout"]["tools"] == {"web_search": 2, "calculator": 1}
+    assert summary["agents"]["coder"]["tokens_total"] == 70
+    assert summary["agents"]["coder"]["tool_calls"] == 0
+    assert summary["agents"]["coder"]["tools"] == {}
     assert summary["totals"]["calls"] == 3
     assert summary["totals"]["stub_calls"] == 2
     assert summary["totals"]["tool_calls"] == 3
@@ -96,9 +96,9 @@ def test_usage_summary_tolerates_rows_without_tools(monkeypatch, tmp_path):
     }
     log.write_text(json.dumps(old_row) + "\n")
     summary = usage.get_summary()
-    assert summary["agents"]["Scout"]["calls"] == 1
-    assert summary["agents"]["Scout"]["tools"] == {}
-    assert summary["agents"]["Scout"]["tool_calls"] == 0
+    assert summary["agents"]["scout"]["calls"] == 1
+    assert summary["agents"]["scout"]["tools"] == {}
+    assert summary["agents"]["scout"]["tool_calls"] == 0
 
 
 def test_record_usage_logs_tool_names(monkeypatch, tmp_path):
@@ -107,7 +107,7 @@ def test_record_usage_logs_tool_names(monkeypatch, tmp_path):
 
     monkeypatch.setattr(usage, "LOG_PATH", tmp_path / "usage.jsonl")
     result = AgentResult(
-        agent_name="Coder",
+        agent_name="coder",
         department="code",
         task_id="t1",
         output="done",
@@ -118,4 +118,4 @@ def test_record_usage_logs_tool_names(monkeypatch, tmp_path):
     )
     _record_usage(result)
     summary = usage.get_summary()
-    assert summary["agents"]["Coder"]["tools"] == {"shell": 1, "calculator": 1}
+    assert summary["agents"]["coder"]["tools"] == {"shell": 1, "calculator": 1}

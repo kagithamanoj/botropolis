@@ -85,19 +85,19 @@ def test_ask_rejects_too_much_history():
 
 def test_ask_agent_accepts_history():
     resp = client.post(
-        "/agents/DevOps/ask",
+        "/agents/devops/ask",
         json={
             "request": "And the second one?",
             "history": [{"role": "user", "content": "List two options."}],
         },
     )
     assert resp.status_code == 200
-    assert resp.json()["agent_name"] == "DevOps"
+    assert resp.json()["agent_name"] == "devops"
 
 
 def test_ask_agent_rejects_bad_history_role():
     resp = client.post(
-        "/agents/DevOps/ask",
+        "/agents/devops/ask",
         json={
             "request": "hi",
             "history": [{"role": "system", "content": "sneaky"}],
@@ -109,13 +109,13 @@ def test_ask_agent_rejects_bad_history_role():
 def test_agent_task_carries_history():
     from botropolis.server import _agent_task, registry
 
-    agent = registry.get("DevOps")
+    agent = registry.get("devops")
     task = _agent_task(
         agent,
         "follow up",
         [{"role": "user", "content": "What is 2+2?"}],
     )
-    assert task.agent_name == "DevOps"
+    assert task.agent_name == "devops"
     assert "user: What is 2+2?" in task.context.chat_history
 
 
@@ -155,7 +155,7 @@ def test_stream_accepts_history_param():
     history = json.dumps([{"role": "user", "content": "What is 2+2?"}])
     with client.stream(
         "GET",
-        "/agents/DevOps/ask/stream",
+        "/agents/devops/ask/stream",
         params={"request": "And the second one?", "history": history},
     ) as resp:
         assert resp.status_code == 200
@@ -166,7 +166,7 @@ def test_stream_accepts_history_param():
 def test_stream_tolerates_bad_history_param():
     with client.stream(
         "GET",
-        "/agents/DevOps/ask/stream",
+        "/agents/devops/ask/stream",
         params={"request": "hi", "history": "not json"},
     ) as resp:
         assert resp.status_code == 200
