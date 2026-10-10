@@ -117,6 +117,18 @@ def test_parse_rejects_non_object_json():
         parse_structured_output("[1, 2, 3]", AgentOutput)
 
 
+def test_parse_prose_wrapped_json():
+    wrapped = "Here is my answer: " + good_reply() + " Hope that helps."
+    model = parse_structured_output(wrapped, AgentOutput)
+    assert model.summary == "Did the thing."
+
+
+def test_parse_prefers_strict_candidate_first():
+    # Valid JSON up front wins; the braced fallback is not needed.
+    model = parse_structured_output(good_reply(), AgentOutput)
+    assert model.summary == "Did the thing."
+
+
 def test_parse_rejects_missing_summary():
     with pytest.raises(OutputValidationError, match="summary"):
         parse_structured_output(json.dumps({"details": "no summary"}), AgentOutput)

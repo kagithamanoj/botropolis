@@ -103,19 +103,36 @@ class OutputValidationError(ValueError):
     """Raised when model output does not match the declared schema."""
 
 
-def extract_json(raw: str) -> str:
-    """Pull the JSON payload out of raw model text.
+def _json_candidates(raw: str):
+    """Yield JSON candidate strings from raw model text, best first.
 
-    Handles ```json fences, bare ``` fences, and plain JSON. Returns
-    the candidate JSON string, still unparsed.
+    1. The text itself, with ``` fences stripped when present.
+    2. The outermost { ... } span, for models that wrap the JSON in
+       a sentence or two despite being told not to.
     """
     text = raw.strip()
     if text.startswith("```"):
         lines = text.splitlines()[1:]  # drop the opening fence
         if lines and lines[-1].strip().startswith("```"):
             lines = lines[:-1]  # drop the closing fence
-        text = "\n".join(lines).strip()
-    return text
+        yield "\n".join(lines).strip()
+    else:
+        yield text
+    start, end = text.find("{"), text.rfind("}")
+    if 0 <= start < end:
+        span = text[start : end + 1]
+        if span != text:
+            yield span
+
+
+def extract_json(raw: str) -> str:
+    """Pull the JSON payload out of raw model text.
+
+    Handles ```json fences, bare ``` fences, plain JSON, and JSON
+    wrapped in prose. Returns the first candidate; see
+    parse_structured_output for fallback across candidates.
+    """
+    return next(_json_candidates(raw))
 
 
 def _summarize_errors(exc: ValidationError) -> str:
@@ -135,20 +152,25 @@ def parse_structured_output(raw: str, schema: Type[AgentOutput]) -> AgentOutput:
     the schema so logs and repair prompts say what was expected.
     """
     name = schema.__name__
-    try:
-        data = json.loads(extract_json(raw))
-    except json.JSONDecodeError as exc:
-        raise OutputValidationError(f"output is not valid JSON for {name}: {exc}")
-    if not isinstance(data, dict):
-        raise OutputValidationError(
-            f"output JSON for {name} must be an object, not a list or value"
-        )
-    try:
-        return schema.model_validate(data)
-    except ValidationError as exc:
-        raise OutputValidationError(
-            f"output does not match the {name} schema: {_summarize_errors(exc)}"
-        )
+    last_error = ""
+    for candidate in _json_candidates(raw):
+        try:
+            data = json.loads(candidate)
+        except json.JSONDecodeError as exc:
+            last_error = f"output is not valid JSON for {name}: {exc}"
+            continue
+        if not isinstance(data, dict):
+            last_error = (
+                f"output JSON for {name} must be an object, not a list or value"
+            )
+            continue
+        try:
+            return schema.model_validate(data)
+        except ValidationError as exc:
+            last_error = (
+                f"output does not match the {name} schema: {_summarize_errors(exc)}"
+            )
+    raise OutputValidationError(last_error or f"output is empty, expected {name} JSON")
 
 
 def format_instruction(schema: Type[AgentOutput]) -> str:
