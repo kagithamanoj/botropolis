@@ -87,11 +87,30 @@ plainly instead of failing.
 
 ## Schemas
 
-`botropolis/core/schemas.py` has the six dataclasses everything passes
-around: `Task` (work to do), `ToolCall` (one tool invocation),
-`AgentResult` (what one agent produced), `CompanyReport` (the CEO's final
+`botropolis/core/schemas.py` has the dataclasses everything passes
+around: `Task` (work to do), `Context` (what the agent may know beyond
+the task: chat history, teammates' outputs), `ToolCall` (one tool
+invocation), `AgentResult` (what one agent produced, including the
+validated `structured` answer), `CompanyReport` (the CEO's final
 answer), plus `TeamRound` and `TeamReport` for collaboration runs. All
 serialize with `to_dict()`, which is what the API server returns.
+
+## Output contracts
+
+Every agent declares an `output_schema` in its spec (or takes the
+department default) from `botropolis/core/output_schemas.py`. The
+framework asks the model for JSON matching the schema, validates it
+with Pydantic, and retries once with the errors spelled out. A
+twice-failed answer becomes a failed result, never silent garbage.
+
+## Run ledger
+
+`botropolis/core/ledger.py` is an append-only, SQLite-backed event log.
+Every run appends `run_started`, `task_assigned`, `tool_called`,
+`output_produced`, `output_repair`, `agent_failed`, and `run_finished`
+events under one run id. The CEO keeps an in-memory ledger by default;
+pass `Ledger("checkpoints/runs.db")` to persist the trail. Recording
+never breaks a run: a failing ledger is swallowed, not propagated.
 
 ## Server
 

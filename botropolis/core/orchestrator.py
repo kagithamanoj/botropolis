@@ -11,6 +11,7 @@ import time
 from typing import Dict, List, Optional, Tuple
 
 from botropolis.core.agent import Agent
+from botropolis.core.ledger import Ledger, new_run_id
 from botropolis.core.models import ModelClient
 from botropolis.core.registry import AgentRegistry
 from botropolis.core.schemas import (
@@ -126,9 +127,21 @@ class CEO:
         self,
         registry: Optional[AgentRegistry] = None,
         client: Optional[ModelClient] = None,
+        ledger: Optional[Ledger] = None,
     ) -> None:
         self.registry = registry or AgentRegistry()
         self.client = client or ModelClient()
+        # The run ledger: every handle()/team() call appends its events
+        # here. Defaults to in-memory (hermetic, no disk side effects);
+        # pass Ledger("checkpoints/runs.db") to persist the trail.
+        self.ledger = ledger if ledger is not None else Ledger()
+
+    def _record(self, run_id: str, kind: str, payload: Optional[Dict] = None) -> None:
+        """Append a CEO-level ledger event. Never raises."""
+        try:
+            self.ledger.record(run_id, kind, self.name, payload or {})
+        except Exception:
+            pass
 
     def score_departments(self, request: str) -> List[Tuple[str, int]]:
         """Score departments by keyword hits, highest first."""
@@ -198,25 +211,42 @@ class CEO:
         self, request: str, history: Optional[List[Dict[str, str]]] = None
     ) -> CompanyReport:
         """Run the full company workflow for one user request."""
+        run_id = new_run_id()
         started = time.time()
-        tasks = self.plan(request, history=history)
-        results: List[AgentResult] = []
-        departments: List[str] = []
-        for task in tasks:
-            agent = self.assign(task)
-            task.agent_name = agent.name
-            result = agent.run(task)
-            results.append(result)
-            if agent.department not in departments:
-                departments.append(agent.department)
-        summary = self._synthesize(request, results)
-        return CompanyReport(
-            request=request,
-            departments_involved=departments,
-            results=results,
-            summary=summary,
-            elapsed_seconds=time.time() - started,
+        self._record(run_id, "run_started", {"request": request})
+        try:
+            tasks = self.plan(request, history=history)
+            results: List[AgentResult] = []
+            departments: List[str] = []
+            for task in tasks:
+                agent = self.assign(task)
+                task.agent_name = agent.name
+                result = agent.run(task, ledger=self.ledger, run_id=run_id)
+                results.append(result)
+                if agent.department not in departments:
+                    departments.append(agent.department)
+            summary = self._synthesize(request, results)
+            report = CompanyReport(
+                request=request,
+                departments_involved=departments,
+                results=results,
+                summary=summary,
+                elapsed_seconds=time.time() - started,
+            )
+        except Exception as exc:
+            self._record(run_id, "run_failed", {"error": str(exc)})
+            raise
+        self._record(
+            run_id,
+            "run_finished",
+            {
+                "departments": departments,
+                "results": len(results),
+                "successful": report.successful(),
+                "elapsed_seconds": report.elapsed_seconds,
+            },
         )
+        return report
 
     def team(self, request: str, agent_names: List[str], rounds: int = 2) -> TeamReport:
         """Run named agents as a team in collaboration rounds.
@@ -242,35 +272,54 @@ class CEO:
                 raise KeyError(f"Unknown agent: {name}")
         rounds = max(1, min(int(rounds), MAX_TEAM_ROUNDS))
 
+        run_id = new_run_id()
         started = time.time()
-        team_rounds: List[TeamRound] = []
-        prior: List[Tuple[int, str, str]] = []  # (round_number, agent_name, output)
-        for round_num in range(1, rounds + 1):
-            for agent in agents:
-                task = Task(
-                    description=f"Team request (round {round_num} of {rounds}): {request}",
-                    department=agent.department,
-                    agent_name=agent.name,
-                    context=self._team_context(prior),
-                )
-                result = agent.run(task)
-                team_rounds.append(
-                    TeamRound(
-                        round_number=round_num,
-                        agent_name=agent.name,
-                        department=agent.department,
-                        result=result,
-                    )
-                )
-                prior.append((round_num, agent.name, result.output))
-
-        return TeamReport(
-            request=request,
-            agents=[a.name for a in agents],
-            rounds=team_rounds,
-            synthesis=self._synthesize_team(request, agents, team_rounds),
-            elapsed_seconds=time.time() - started,
+        self._record(
+            run_id, "run_started", {"request": request, "team": [a.name for a in agents]}
         )
+        try:
+            team_rounds: List[TeamRound] = []
+            prior: List[Tuple[int, str, str]] = []  # (round_number, agent_name, output)
+            for round_num in range(1, rounds + 1):
+                for agent in agents:
+                    task = Task(
+                        description=f"Team request (round {round_num} of {rounds}): {request}",
+                        department=agent.department,
+                        agent_name=agent.name,
+                        context=self._team_context(prior),
+                    )
+                    result = agent.run(task, ledger=self.ledger, run_id=run_id)
+                    team_rounds.append(
+                        TeamRound(
+                            round_number=round_num,
+                            agent_name=agent.name,
+                            department=agent.department,
+                            result=result,
+                        )
+                    )
+                    prior.append((round_num, agent.name, result.output))
+
+            report = TeamReport(
+                request=request,
+                agents=[a.name for a in agents],
+                rounds=team_rounds,
+                synthesis=self._synthesize_team(request, agents, team_rounds),
+                elapsed_seconds=time.time() - started,
+            )
+        except Exception as exc:
+            self._record(run_id, "run_failed", {"error": str(exc)})
+            raise
+        self._record(
+            run_id,
+            "run_finished",
+            {
+                "agents": [a.name for a in agents],
+                "rounds": len(team_rounds),
+                "successful": report.successful(),
+                "elapsed_seconds": report.elapsed_seconds,
+            },
+        )
+        return report
 
     def _team_context(self, prior: List[Tuple[int, str, str]]) -> Context:
         """Pack earlier teammates' outputs into a Context."""

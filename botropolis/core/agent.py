@@ -16,6 +16,7 @@ import yaml
 
 from botropolis.core.loop import DEFAULT_MAX_STEPS, parse_model_reply, run_tool_loop
 from botropolis.core.models import ModelClient
+from botropolis.core.ledger import Ledger, new_run_id
 from botropolis.core.output_schemas import (
     AgentOutput,
     OutputValidationError,
@@ -94,8 +95,22 @@ class Agent:
             {"role": "user", "content": user_content},
         ]
 
+    def _record(self, ledger, run_id, kind, payload=None) -> None:
+        """Append a ledger event. Never raises: the ledger is a side
+        channel, and a failing side channel must not break the run."""
+        if ledger is None:
+            return
+        try:
+            ledger.record(run_id, kind, self.name, payload or {})
+        except Exception:
+            pass
+
     def _contract_output(
-        self, raw_text: str, base_messages: List[Dict[str, str]]
+        self,
+        raw_text: str,
+        base_messages: List[Dict[str, str]],
+        ledger: Optional[Ledger] = None,
+        run_id: Optional[str] = None,
     ) -> tuple[str, Dict[str, Any]]:
         """Validate raw model text against the agent's output schema.
 
@@ -117,6 +132,9 @@ class Agent:
         try:
             model = parse_structured_output(raw_text, self.output_schema)
         except OutputValidationError as first:
+            self._record(
+                ledger, run_id, "output_repair", {"error": str(first), "attempt": 1}
+            )
             repair_messages = base_messages + [
                 {"role": "assistant", "content": raw_text},
                 {
@@ -147,7 +165,13 @@ class Agent:
             return f"{model.summary.strip()}\n\n{model.details.strip()}"
         return model.summary.strip()
 
-    def run(self, task: Task | str, on_event=None) -> AgentResult:
+    def run(
+        self,
+        task: Task | str,
+        on_event=None,
+        ledger: Optional[Ledger] = None,
+        run_id: Optional[str] = None,
+    ) -> AgentResult:
         """Run one task and return an AgentResult.
 
         Agents with a toolkit run the think-act-observe loop; agents
@@ -157,13 +181,22 @@ class Agent:
 
         on_event is passed to the tool loop when the agent has a toolkit;
         see run_tool_loop for the event kinds.
+
+        ledger and run_id are optional: when given, the run's events
+        (task assigned, tools called, answer produced, contract repairs,
+        failures) are appended to the ledger.
         """
         if isinstance(task, str):
             task = Task(description=task, department=self.department, agent_name=self.name)
+        if ledger is not None and run_id is None:
+            run_id = new_run_id()
         started = time.time()
         try:
+            self._record(ledger, run_id, "task_assigned", task.to_dict())
             if self.toolkit:
-                return self._run_with_tools(task, started, on_event=on_event)
+                return self._run_with_tools(
+                    task, started, on_event=on_event, ledger=ledger, run_id=run_id
+                )
             messages = self.build_messages(task)
             raw = self.client.chat(self.model, messages)
             # Same answer semantics as the tool loop: a FINAL: prefix marks
@@ -171,10 +204,12 @@ class Agent:
             kind, parsed = parse_model_reply(raw)
             if kind == "final":
                 raw = parsed
-            output, structured = self._contract_output(raw, messages)
+            output, structured = self._contract_output(
+                raw, messages, ledger=ledger, run_id=run_id
+            )
             provider = self.client.provider_for(self.model)
             usage = getattr(self.client, "last_usage", None) or {}
-            return AgentResult(
+            result = AgentResult(
                 agent_name=self.name,
                 department=self.department,
                 task_id=task.id,
@@ -193,7 +228,20 @@ class Agent:
                 },
                 elapsed_seconds=time.time() - started,
             )
+            self._record(
+                ledger,
+                run_id,
+                "output_produced",
+                {
+                    "summary": structured.get("summary", ""),
+                    "structured": structured,
+                    "output_validated": provider != "stub",
+                    "elapsed_seconds": result.elapsed_seconds,
+                },
+            )
+            return result
         except Exception as exc:  # never let one agent crash the company
+            self._record(ledger, run_id, "agent_failed", {"error": str(exc)})
             return AgentResult(
                 agent_name=self.name,
                 department=self.department,
@@ -206,17 +254,36 @@ class Agent:
                 elapsed_seconds=time.time() - started,
             )
 
-    def _run_with_tools(self, task: Task, started: float, on_event=None) -> AgentResult:
+    def _run_with_tools(
+        self,
+        task: Task,
+        started: float,
+        on_event=None,
+        ledger: Optional[Ledger] = None,
+        run_id: Optional[str] = None,
+    ) -> AgentResult:
         """Run the think-act-observe loop and wrap it in an AgentResult.
 
         The loop's final answer goes through the same output contract
         as the single-shot path: validated against the schema, one
-        repair attempt on failure.
+        repair attempt on failure. Tool calls are recorded to the
+        ledger as they finish.
         """
-        raw_output, tool_calls, usage = run_tool_loop(self, task, on_event=on_event)
-        output, structured = self._contract_output(raw_output, self.build_messages(task))
+
+        def emit_and_record(kind: str, payload: Dict[str, Any]) -> None:
+            if kind == "tool_finished":
+                self._record(ledger, run_id, "tool_called", payload)
+            if on_event is not None:
+                on_event(kind, payload)
+
+        raw_output, tool_calls, usage = run_tool_loop(
+            self, task, on_event=emit_and_record
+        )
+        output, structured = self._contract_output(
+            raw_output, self.build_messages(task), ledger=ledger, run_id=run_id
+        )
         provider = self.client.provider_for(self.model)
-        return AgentResult(
+        result = AgentResult(
             agent_name=self.name,
             department=self.department,
             task_id=task.id,
@@ -238,6 +305,19 @@ class Agent:
             elapsed_seconds=time.time() - started,
             tool_calls=tool_calls,
         )
+        self._record(
+            ledger,
+            run_id,
+            "output_produced",
+            {
+                "summary": structured.get("summary", ""),
+                "structured": structured,
+                "output_validated": provider != "stub",
+                "tool_calls": len(tool_calls),
+                "elapsed_seconds": result.elapsed_seconds,
+            },
+        )
+        return result
 
     def describe(self) -> Dict[str, Any]:
         """Return a short public description of this agent."""
