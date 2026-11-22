@@ -134,13 +134,21 @@ class Contract:
 
 @dataclass
 class Task:
-    """A unit of work assigned to one agent."""
+    """A unit of work assigned to one agent.
+
+    needs_approval names tools that may not run on this task unless
+    approved is True: the approval wall. Flagged calls are blocked at
+    dispatch, recorded, and reported back to the model as blocked.
+    Empty list (the default) means no wall.
+    """
 
     description: str
     department: Optional[str] = None
     agent_name: Optional[str] = None
     context: Context = field(default_factory=Context)
     contract: Optional[Contract] = None
+    needs_approval: List[str] = field(default_factory=list)
+    approved: bool = False
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:8])
 
     def to_dict(self) -> Dict[str, Any]:

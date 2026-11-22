@@ -95,6 +95,14 @@ class AskRequest(BaseModel):
         default=None,
         description="Optional task contract attached to every task on the run",
     )
+    needs_approval: List[str] = Field(
+        default_factory=list,
+        description="Tools that need human approval before they may run",
+    )
+    approved: bool = Field(
+        default=False,
+        description="Whether the flagged tools are approved for this run",
+    )
 
 
 class TeamRequest(BaseModel):
@@ -134,7 +142,13 @@ def ask(body: AskRequest) -> dict:
     contract = (
         Contract.from_dict(body.contract.model_dump()) if body.contract else None
     )
-    report = ceo.handle(body.request, history=history, contract=contract)
+    report = ceo.handle(
+        body.request,
+        history=history,
+        contract=contract,
+        needs_approval=body.needs_approval,
+        approved=body.approved,
+    )
     for result in report.results:
         _record_usage(result)
     return report.to_dict()

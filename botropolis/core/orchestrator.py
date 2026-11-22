@@ -182,6 +182,8 @@ class CEO:
         request: str,
         history: Optional[List[Dict[str, str]]] = None,
         contract: Optional[Contract] = None,
+        needs_approval: Optional[List[str]] = None,
+        approved: bool = False,
     ) -> List[Task]:
         """Decompose a request into one task per relevant department.
 
@@ -214,6 +216,8 @@ class CEO:
                     department=dept,
                     context=context,
                     contract=contract,
+                    needs_approval=list(needs_approval or []),
+                    approved=approved,
                 )
             )
         return tasks
@@ -238,20 +242,33 @@ class CEO:
         request: str,
         history: Optional[List[Dict[str, str]]] = None,
         contract: Optional[Contract] = None,
+        needs_approval: Optional[List[str]] = None,
+        approved: bool = False,
     ) -> CompanyReport:
         """Run the full company workflow for one user request.
 
         contract, when given, is attached to every task on the run,
         carried on the report, and noted in the ledger at run start.
+        needs_approval and approved set the approval wall on every
+        task: flagged tools do not run unless the run is approved.
         """
         run_id = new_run_id()
         started = time.time()
         start_payload: Dict = {"request": request}
         if contract is not None:
             start_payload["contract"] = contract.to_dict()
+        if needs_approval:
+            start_payload["needs_approval"] = list(needs_approval)
+            start_payload["approved"] = approved
         self._record(run_id, "run_started", start_payload)
         try:
-            tasks = self.plan(request, history=history, contract=contract)
+            tasks = self.plan(
+                request,
+                history=history,
+                contract=contract,
+                needs_approval=needs_approval,
+                approved=approved,
+            )
             results: List[AgentResult] = []
             departments: List[str] = []
             for task in tasks:
@@ -292,6 +309,8 @@ class CEO:
         agent_names: List[str],
         rounds: int = 2,
         contract: Optional[Contract] = None,
+        needs_approval: Optional[List[str]] = None,
+        approved: bool = False,
     ) -> TeamReport:
         """Run named agents as a team in collaboration rounds.
 
@@ -333,6 +352,8 @@ class CEO:
                         agent_name=agent.name,
                         context=self._team_context(prior),
                         contract=contract,
+                        needs_approval=list(needs_approval or []),
+                        approved=approved,
                     )
                     result = agent.run(task, ledger=self.ledger, run_id=run_id)
                     team_rounds.append(

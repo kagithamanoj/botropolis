@@ -87,5 +87,7 @@ def task_from_state(state: Dict[str, Any]) -> Task:
         agent_name=data.get("agent_name"),
         context=context,
         contract=contract,
+        needs_approval=[str(name) for name in data.get("needs_approval") or []],
+        approved=bool(data.get("approved", False)),
         id=str(data.get("id") or "resumed"),
     )
