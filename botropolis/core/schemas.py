@@ -47,6 +47,39 @@ class Context:
 
 
 @dataclass
+class Contract:
+    """The agreement for one run: what is being done, what is in and
+    out of scope, and what counts as done.
+
+    Written by whoever asks for the work, read by every agent on the
+    run. The CEO attaches it to each task, agents see it in their
+    prompt stated plainly, and the final report carries it back so a
+    reader can check the work against what was actually agreed.
+    """
+
+    goal: str
+    scope: List[str] = field(default_factory=list)
+    exclusions: List[str] = field(default_factory=list)
+    done_when: List[str] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Return a JSON-serializable dict."""
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Optional[Dict[str, Any]]) -> Optional["Contract"]:
+        """Rebuild a Contract from plain data. None in, None out."""
+        if not data:
+            return None
+        return cls(
+            goal=str(data.get("goal", "")),
+            scope=[str(item) for item in data.get("scope", [])],
+            exclusions=[str(item) for item in data.get("exclusions", [])],
+            done_when=[str(item) for item in data.get("done_when", [])],
+        )
+
+
+@dataclass
 class Task:
     """A unit of work assigned to one agent."""
 
@@ -54,6 +87,7 @@ class Task:
     department: Optional[str] = None
     agent_name: Optional[str] = None
     context: Context = field(default_factory=Context)
+    contract: Optional[Contract] = None
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:8])
 
     def to_dict(self) -> Dict[str, Any]:
@@ -113,6 +147,7 @@ class CompanyReport:
     departments_involved: List[str] = field(default_factory=list)
     results: List[AgentResult] = field(default_factory=list)
     summary: str = ""
+    contract: Optional[Contract] = None
     elapsed_seconds: float = 0.0
     created_at: float = field(default_factory=time.time)
 
@@ -149,6 +184,7 @@ class TeamReport:
     agents: List[str] = field(default_factory=list)
     rounds: List[TeamRound] = field(default_factory=list)
     synthesis: str = ""
+    contract: Optional[Contract] = None
     elapsed_seconds: float = 0.0
     created_at: float = field(default_factory=time.time)
 

@@ -34,7 +34,7 @@ from pydantic import BaseModel, Field
 from botropolis.core import usage
 from botropolis.core.orchestrator import CEO, MAX_TEAM_ROUNDS, history_context
 from botropolis.core.registry import AgentRegistry
-from botropolis.core.schemas import AgentResult, Task
+from botropolis.core.schemas import AgentResult, Contract, Task
 from botropolis.tools.builtin import notebook_path
 
 WEB_DIR = Path(__file__).parent / "web"
@@ -56,6 +56,19 @@ class ChatTurn(BaseModel):
     content: str = Field(..., min_length=1, max_length=4000)
 
 
+class ContractIn(BaseModel):
+    """A task contract: the agreement the run is held to."""
+
+    goal: str = Field(..., min_length=1, description="What the run must achieve")
+    scope: List[str] = Field(default_factory=list, description="What is in scope")
+    exclusions: List[str] = Field(
+        default_factory=list, description="What the run must not do"
+    )
+    done_when: List[str] = Field(
+        default_factory=list, description="Checks that define done, in words"
+    )
+
+
 class AskRequest(BaseModel):
     """Body for POST /ask."""
 
@@ -64,6 +77,10 @@ class AskRequest(BaseModel):
         default_factory=list,
         max_length=20,
         description="Earlier chat turns, oldest first",
+    )
+    contract: ContractIn | None = Field(
+        default=None,
+        description="Optional task contract attached to every task on the run",
     )
 
 
@@ -101,7 +118,10 @@ app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 def ask(body: AskRequest) -> dict:
     """Send a request to Manoj (the CEO); get back a full CompanyReport."""
     history = [turn.model_dump() for turn in body.history]
-    report = ceo.handle(body.request, history=history)
+    contract = (
+        Contract.from_dict(body.contract.model_dump()) if body.contract else None
+    )
+    report = ceo.handle(body.request, history=history, contract=contract)
     for result in report.results:
         _record_usage(result)
     return report.to_dict()
