@@ -7,8 +7,17 @@ result, but a search that could not run is an error: network failures,
 bad HTTP statuses, and malformed payloads all raise, so nobody mistakes
 a broken feed for "no jobs today".
 
+job_apply is deliberately narrower than its name. It does not submit
+anything to an external site. It validates that the resume lives inside
+the workspace, records the application in a local log
+(botropolis/data/applications.jsonl), and returns the package, apply
+url included, so a human or a browser flow does the actual submission.
+Applying twice to the same role returns a warning instead of a second
+record.
+
 Tests and evals can point BOTROPOLIS_JOBS_FEED_FILE at a saved copy of
-the feed payload to run without the network.
+the feed payload to run without the network, and
+BOTROPOLIS_APPLICATIONS_LOG moves the applications log.
 """
 
 from __future__ import annotations
@@ -16,12 +25,14 @@ from __future__ import annotations
 import json
 import os
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 
 import requests
 
 from botropolis.tools.builtin import Tool
+from botropolis.tools.sandbox import resolve_workspace_path, workspace_relative
 
 REMOTEOK_API_URL = "https://remoteok.com/api"
 
@@ -152,4 +163,111 @@ class JobSearchTool(Tool):
             "keywords": keywords,
             "count": len(jobs[:limit]),
             "jobs": jobs[:limit],
+        }
+
+
+def _applications_log_path() -> Path:
+    """Where application records are appended, one JSON object a line."""
+    override = os.environ.get("BOTROPOLIS_APPLICATIONS_LOG")
+    if override:
+        return Path(override).expanduser()
+    return Path(__file__).resolve().parents[1] / "data" / "applications.jsonl"
+
+
+def _read_applications(path: Path) -> List[Dict[str, Any]]:
+    """Read back the recorded applications. A missing log is empty."""
+    if not path.exists():
+        return []
+    records = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            records.append(json.loads(line))
+        except ValueError:
+            continue
+    return records
+
+
+class JobApplyTool(Tool):
+    """Record a prepared job application. Does not submit anything."""
+
+    name = "job_apply"
+    description = (
+        "Prepare a job application: check the resume exists in the "
+        "workspace and record the application (title, company, apply "
+        "url, resume) in the local applications log. This does NOT "
+        "submit to the employer; it returns the apply url so a human "
+        "can finish the submission. Recording the same title and "
+        "company twice returns a warning instead of a duplicate."
+    )
+    parameters = {
+        "title": {
+            "type": "string",
+            "description": "Job title, as it appears in the posting",
+            "required": True,
+        },
+        "company": {
+            "type": "string",
+            "description": "Company name, as it appears in the posting",
+            "required": True,
+        },
+        "url": {
+            "type": "string",
+            "description": "The posting's apply url",
+            "required": True,
+        },
+        "resume": {
+            "type": "string",
+            "description": "Resume path inside the workspace, e.g. 'resume.txt'",
+            "required": True,
+        },
+    }
+
+    def execute(
+        self, title: str, company: str, url: str, resume: str
+    ) -> Dict[str, Any]:
+        resume_path = resolve_workspace_path(resume)
+        if not resume_path.is_file():
+            raise ValueError(f"resume not found in the workspace: {resume}")
+
+        log_path = _applications_log_path()
+        for existing in _read_applications(log_path):
+            if (
+                str(existing.get("company", "")).strip().lower()
+                == (company or "").strip().lower()
+                and str(existing.get("title", "")).strip().lower()
+                == (title or "").strip().lower()
+            ):
+                return {
+                    "status": "duplicate",
+                    "warning": (
+                        f"already recorded an application for {title} at "
+                        f"{company} on {existing.get('timestamp', 'an earlier run')}; "
+                        "nothing new was written"
+                    ),
+                    "application": existing,
+                    "apply_url": url,
+                }
+
+        record = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "title": title,
+            "company": company,
+            "url": url,
+            "resume": workspace_relative(resume_path),
+            "status": "prepared",
+        }
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(log_path, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(record) + "\n")
+        return {
+            "status": "prepared",
+            "application": record,
+            "apply_url": url,
+            "note": (
+                "Recorded locally, nothing was submitted. "
+                "Use apply_url to submit the application."
+            ),
         }
