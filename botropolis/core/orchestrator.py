@@ -18,6 +18,7 @@ from botropolis.core.schemas import (
     AgentResult,
     CompanyReport,
     Context,
+    Contract,
     Task,
     TeamReport,
     TeamRound,
@@ -156,7 +157,10 @@ class CEO:
         return sorted(scores, key=lambda item: (-item[1], item[0]))
 
     def plan(
-        self, request: str, history: Optional[List[Dict[str, str]]] = None
+        self,
+        request: str,
+        history: Optional[List[Dict[str, str]]] = None,
+        contract: Optional[Contract] = None,
     ) -> List[Task]:
         """Decompose a request into one task per relevant department.
 
@@ -188,6 +192,7 @@ class CEO:
                     description=f"{request}{focus}",
                     department=dept,
                     context=context,
+                    contract=contract,
                 )
             )
         return tasks
@@ -208,14 +213,24 @@ class CEO:
         return agents[0]
 
     def handle(
-        self, request: str, history: Optional[List[Dict[str, str]]] = None
+        self,
+        request: str,
+        history: Optional[List[Dict[str, str]]] = None,
+        contract: Optional[Contract] = None,
     ) -> CompanyReport:
-        """Run the full company workflow for one user request."""
+        """Run the full company workflow for one user request.
+
+        contract, when given, is attached to every task on the run,
+        carried on the report, and noted in the ledger at run start.
+        """
         run_id = new_run_id()
         started = time.time()
-        self._record(run_id, "run_started", {"request": request})
+        start_payload: Dict = {"request": request}
+        if contract is not None:
+            start_payload["contract"] = contract.to_dict()
+        self._record(run_id, "run_started", start_payload)
         try:
-            tasks = self.plan(request, history=history)
+            tasks = self.plan(request, history=history, contract=contract)
             results: List[AgentResult] = []
             departments: List[str] = []
             for task in tasks:
@@ -231,6 +246,7 @@ class CEO:
                 departments_involved=departments,
                 results=results,
                 summary=summary,
+                contract=contract,
                 elapsed_seconds=time.time() - started,
             )
         except Exception as exc:
@@ -248,7 +264,13 @@ class CEO:
         )
         return report
 
-    def team(self, request: str, agent_names: List[str], rounds: int = 2) -> TeamReport:
+    def team(
+        self,
+        request: str,
+        agent_names: List[str],
+        rounds: int = 2,
+        contract: Optional[Contract] = None,
+    ) -> TeamReport:
         """Run named agents as a team in collaboration rounds.
 
         Each agent's prompt includes the original request plus the outputs
@@ -274,9 +296,10 @@ class CEO:
 
         run_id = new_run_id()
         started = time.time()
-        self._record(
-            run_id, "run_started", {"request": request, "team": [a.name for a in agents]}
-        )
+        start_payload = {"request": request, "team": [a.name for a in agents]}
+        if contract is not None:
+            start_payload["contract"] = contract.to_dict()
+        self._record(run_id, "run_started", start_payload)
         try:
             team_rounds: List[TeamRound] = []
             prior: List[Tuple[int, str, str]] = []  # (round_number, agent_name, output)
@@ -287,6 +310,7 @@ class CEO:
                         department=agent.department,
                         agent_name=agent.name,
                         context=self._team_context(prior),
+                        contract=contract,
                     )
                     result = agent.run(task, ledger=self.ledger, run_id=run_id)
                     team_rounds.append(
@@ -304,6 +328,7 @@ class CEO:
                 agents=[a.name for a in agents],
                 rounds=team_rounds,
                 synthesis=self._synthesize_team(request, agents, team_rounds),
+                contract=contract,
                 elapsed_seconds=time.time() - started,
             )
         except Exception as exc:

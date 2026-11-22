@@ -89,6 +89,19 @@ class Agent:
                 f"- {k}: {v}" for k, v in task.context.to_dict().items()
             )
             user_content += f"\n\nContext:\n{context_lines}"
+        if task.contract is not None:
+            contract = task.contract
+            lines = ["Contract for this task:", f"- goal: {contract.goal}"]
+            if contract.scope:
+                lines.append(f"- in scope: {'; '.join(contract.scope)}")
+            if contract.exclusions:
+                lines.append(
+                    "- out of scope, do not do these: "
+                    f"{'; '.join(contract.exclusions)}"
+                )
+            if contract.done_when:
+                lines.append(f"- done when: {'; '.join(contract.done_when)}")
+            user_content += "\n\n" + "\n".join(lines)
         user_content += f"\n\nOutput format:\n{format_instruction(self.output_schema)}"
         return [
             {"role": "system", "content": self.system_prompt},
