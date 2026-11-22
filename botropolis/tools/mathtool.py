@@ -54,8 +54,9 @@ _FUNCTIONS = (
 )
 
 # Named constants. `oo` is sympy's spelling of infinity, for limits
-# and improper integrals.
-_CONSTANTS = ("pi", "E", "oo")
+# and improper integrals. `e` is the spelling everyone actually types
+# for Euler's number, so it counts too.
+_CONSTANTS = ("pi", "E", "e", "oo")
 
 _ALLOWED_NAMES = set(_VARIABLES) | set(_FUNCTIONS) | set(_CONSTANTS)
 
@@ -83,6 +84,7 @@ def _namespace() -> Dict[str, Any]:
         ns[name] = getattr(sympy, name)
     ns["pi"] = sympy.pi
     ns["E"] = sympy.E
+    ns["e"] = sympy.E
     ns["oo"] = sympy.oo
     return ns
 

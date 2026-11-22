@@ -133,6 +133,16 @@ def test_equation_outside_solve_is_refused(math_tool):
         math_tool.execute(operation="diff", expression="x = 3")
 
 
+def test_derivative_with_lowercase_e(math_tool):
+    out = math_tool.execute(operation="diff", expression="sin(x)*e^x")
+    assert out["result"] == "exp(x)*sin(x) + exp(x)*cos(x)"
+
+
+def test_eval_lowercase_e(math_tool):
+    out = math_tool.execute(operation="eval", expression="e^2")
+    assert out["value"] == pytest.approx(7.38905609)
+
+
 def test_data_agents_have_the_math_tool():
     registry = AgentRegistry()
     for name in ("pipelines", "trainer"):
