@@ -188,8 +188,18 @@ def test_devops_is_the_cloud_architect():
     agent = registry.get("devops")
     assert agent.title == "Cloud Solutions Architect"
     assert agent.department == "code"
-    assert agent.toolkit == ["web_search", "web_fetch", "calculator"]
+    assert agent.toolkit == [
+        "web_search",
+        "web_fetch",
+        "calculator",
+        "read_file",
+        "write_file",
+        "list_dir",
+    ]
     for cloud in ("AWS", "GCP", "Azure"):
         assert cloud in agent.specialty
         assert cloud in agent.system_prompt
     assert "migration" in agent.system_prompt.lower()
+    prompt = agent.system_prompt.lower()
+    for topic in ("production", "diagram", "decision record", "runbook", "slo"):
+        assert topic in prompt
