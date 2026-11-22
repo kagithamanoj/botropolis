@@ -134,6 +134,7 @@ command:
 ```bash
 botropolis roster --department ops
 botropolis ask Coder "summarize this quarter's roadmap"
+botropolis resume <run_id>
 botropolis team "plan the launch" Coder Reviewer --rounds 2
 botropolis evals
 botropolis notebook
@@ -201,7 +202,7 @@ toolkit:
 
 Current toolkits: Scout and FactChecker get web search and fetch; Coder
 gets shell plus file tools; Reviewer gets file reading; Pipelines and
-Trainer get shell, file tools, and the calculator; Inbox gets Gmail
+Trainer get shell, file tools, the calculator, and the math tool; Inbox gets Gmail
 search, read, and draft; Scheduler gets calendar agenda and event
 creation. Every other agent
 has no toolkit and behaves exactly as before: one model call, one answer.
@@ -220,12 +221,20 @@ The model thinks, emits an ACTION, gets back an `OBSERVATION:` with the
 tool result, and repeats until it replies with FINAL. Anything that is
 not an ACTION line counts as the final answer, which keeps weak models
 and the stub safe by default. Loops stop after `max_steps` (default 8,
-configurable per agent in YAML). Every tool call is recorded on the
-result and shown in the web UI agent cards.
+configurable per agent in YAML). They also stop early, with a failed
+result marked escalated, when the same tool call fails with the same
+error twice in a row, or when a run goes over its token budget or time
+budget (set in the agent spec or passed per run). Every tool call is
+recorded on the result and shown in the web UI agent cards.
+
+Tool runs save their state after every step (`botropolis/data/runs/`,
+gitignored), so an interrupted run can be picked up where it stopped
+with `botropolis resume <run_id>` instead of starting over.
 
 Available tools: `web_search` (DuckDuckGo, no key needed), `web_fetch`
 (page text extraction), `shell`, `read_file`, `write_file`, `list_dir`,
-`calculator`, `current_time`, `gmail_search`, `gmail_read`, `gmail_draft`,
+`calculator`, `math` (symbolic algebra and calculus via sympy),
+`current_time`, `gmail_search`, `gmail_read`, `gmail_draft`,
 `calendar_agenda`, `calendar_create_event`, `notes_append`, `notes_read`.
 
 `notes_append` and `notes_read` share one company notebook
@@ -270,10 +279,11 @@ python -m botropolis.eval.runner
 
 ```
 [PASS] calculator_two_step
+[PASS] math_multi_step
 [PASS] plain_answer_no_tools
 [PASS] unknown_tool_is_refused
 
-3/3 scenarios passed
+4/4 scenarios passed
 ```
 
 Scenarios run with no model credentials and no network: the runner
