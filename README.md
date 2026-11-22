@@ -204,7 +204,8 @@ Current toolkits: Scout and FactChecker get web search and fetch, and
 Scout also gets job search; Coder
 gets shell plus file tools; Reviewer gets file reading; DevOps, the
 cloud architect, gets web search, fetch, and the calculator for market
-and pricing checks; Pipelines and
+and pricing checks, plus file tools so his designs land as documents
+with diagrams; Pipelines and
 Trainer get shell, file tools, the calculator, and the math tool; Inbox gets Gmail
 search, read, and draft, plus job search and job apply; Scheduler gets calendar agenda and event
 creation. Every other agent
