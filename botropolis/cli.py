@@ -4,6 +4,7 @@ Subcommands:
     roster              List every agent, optionally filtered by department.
     ask AGENT "task"    Ask one agent directly and print the answer.
     team "task" A [B]  Run agents as a team in collaboration rounds.
+    resume RUN_ID       Continue an interrupted tool run from its saved state.
     evals               Run the scenario evals.
     serve               Start the web server.
     notebook            Print the shared company notebook.
@@ -38,6 +39,9 @@ def cmd_roster(args: argparse.Namespace) -> int:
 
 
 def cmd_ask(args: argparse.Namespace) -> int:
+    from botropolis.core.ledger import new_run_id
+    from botropolis.core.runstate import RunStore
+
     registry = AgentRegistry()
     try:
         agent = registry.get(args.agent)
@@ -45,22 +49,65 @@ def cmd_ask(args: argparse.Namespace) -> int:
         print(f"Unknown agent: {args.agent}")
         return 1
     events = []
+    run_id = new_run_id()
+    store = RunStore()
     result = agent.run(
         args.task,
         on_event=lambda kind, payload: events.append((kind, payload)),
+        run_id=run_id,
+        store=store,
     )
     for kind, payload in events:
         if kind == "tool_started":
             print(f"[tool] {payload.get('tool')} {payload.get('args', {})}")
     if not result.success:
         print(f"Failed: {result.error or 'unknown error'}")
+        if store.exists(run_id):
+            print(f"Run state saved as {run_id}. Resume it with: botropolis resume {run_id}")
         return 1
     print(result.output)
+    if store.exists(run_id):
+        print(f"run id: {run_id}")
     if args.verbose and result.tool_calls:
         print()
         for call in result.tool_calls:
             status = "ok" if call.success else "FAILED"
             print(f"  {call.tool} {call.args} -> {status}")
+    return 0
+
+
+def cmd_resume(args: argparse.Namespace) -> int:
+    from botropolis.core.runstate import RunStore, task_from_state
+
+    store = RunStore()
+    try:
+        state = store.load(args.run_id)
+    except FileNotFoundError:
+        print(f"No saved run with id {args.run_id}.")
+        return 1
+    if state.get("status") == "finished":
+        print("That run already finished.")
+        if state.get("answer"):
+            print(state["answer"])
+        return 0
+    registry = AgentRegistry()
+    try:
+        agent = registry.get(state.get("agent", ""))
+    except KeyError:
+        print(f"Unknown agent in saved run: {state.get('agent')}")
+        return 1
+    done = len(state.get("steps") or [])
+    print(f"Resuming run {args.run_id}: {done} step(s) already done, continuing.")
+    result = agent.run(
+        task_from_state(state),
+        run_id=state["run_id"],
+        store=store,
+        resume_state=state,
+    )
+    if not result.success:
+        print(f"Failed: {result.error or 'unknown error'}")
+        return 1
+    print(result.output)
     return 0
 
 
@@ -121,6 +168,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("agents", nargs="+", help="Agent names, in run order.")
     p.add_argument("--rounds", type=int, default=2, help="Collaboration rounds (1-3).")
     p.set_defaults(func=cmd_team)
+
+    p = sub.add_parser("resume", help="Continue an interrupted tool run.")
+    p.add_argument("run_id", help="Run id printed by a previous ask.")
+    p.set_defaults(func=cmd_resume)
 
     p = sub.add_parser("evals", help="Run the scenario evals.")
     p.add_argument("directory", nargs="?", default=None, help="Scenarios directory.")
