@@ -60,6 +60,17 @@ class Agent:
         # actually call. There is no separate display-only tools list.
         self.toolkit: List[str] = list(spec.get("toolkit", []))
         self.max_steps: int = int(spec.get("max_steps", DEFAULT_MAX_STEPS))
+        # Optional run budgets for the tool loop. Going over either one
+        # stops the run with an escalated result instead of letting it
+        # burn tokens or wall-clock time without bound.
+        self.token_budget: Optional[int] = (
+            int(spec["token_budget"]) if spec.get("token_budget") is not None else None
+        )
+        self.time_budget_seconds: Optional[float] = (
+            float(spec["time_budget_seconds"])
+            if spec.get("time_budget_seconds") is not None
+            else None
+        )
         unknown = [t for t in self.toolkit if t not in TOOLS]
         if unknown:
             raise ValueError(
@@ -184,6 +195,8 @@ class Agent:
         on_event=None,
         ledger: Optional[Ledger] = None,
         run_id: Optional[str] = None,
+        token_budget: Optional[int] = None,
+        time_budget_seconds: Optional[float] = None,
     ) -> AgentResult:
         """Run one task and return an AgentResult.
 
@@ -208,7 +221,13 @@ class Agent:
             self._record(ledger, run_id, "task_assigned", task.to_dict())
             if self.toolkit:
                 return self._run_with_tools(
-                    task, started, on_event=on_event, ledger=ledger, run_id=run_id
+                    task,
+                    started,
+                    on_event=on_event,
+                    ledger=ledger,
+                    run_id=run_id,
+                    token_budget=token_budget,
+                    time_budget_seconds=time_budget_seconds,
                 )
             messages = self.build_messages(task)
             raw = self.client.chat(self.model, messages)
@@ -274,6 +293,8 @@ class Agent:
         on_event=None,
         ledger: Optional[Ledger] = None,
         run_id: Optional[str] = None,
+        token_budget: Optional[int] = None,
+        time_budget_seconds: Optional[float] = None,
     ) -> AgentResult:
         """Run the think-act-observe loop and wrap it in an AgentResult.
 
@@ -281,6 +302,11 @@ class Agent:
         as the single-shot path: validated against the schema, one
         repair attempt on failure. Tool calls are recorded to the
         ledger as they finish.
+
+        An escalated loop exit (same error twice, or a budget hit)
+        skips the output contract: there is no answer to validate.
+        The result is failed, marked escalated, and says why, so a
+        human picks it up instead of the run quietly ending.
         """
 
         def emit_and_record(kind: str, payload: Dict[str, Any]) -> None:
@@ -290,12 +316,49 @@ class Agent:
                 on_event(kind, payload)
 
         raw_output, tool_calls, usage = run_tool_loop(
-            self, task, on_event=emit_and_record
+            self,
+            task,
+            on_event=emit_and_record,
+            token_budget=token_budget,
+            time_budget_seconds=time_budget_seconds,
         )
+        provider = self.client.provider_for(self.model)
+        if usage.get("escalated"):
+            reason = str(usage.get("escalation_reason") or "run escalated")
+            result = AgentResult(
+                agent_name=self.name,
+                department=self.department,
+                task_id=task.id,
+                output=raw_output,
+                success=False,
+                confidence=0.0,
+                error=reason,
+                metadata={
+                    "model": self.model,
+                    "provider": provider,
+                    "stub": provider == "stub",
+                    "tokens_in": int(usage.get("input", 0)),
+                    "tokens_out": int(usage.get("output", 0)),
+                    "toolkit": self.toolkit,
+                    "tool_calls": len(tool_calls),
+                    "escalated": True,
+                    "escalation_reason": reason,
+                    "output_schema": self.output_schema_name,
+                    "output_validated": False,
+                },
+                elapsed_seconds=time.time() - started,
+                tool_calls=tool_calls,
+            )
+            self._record(
+                ledger,
+                run_id,
+                "run_escalated",
+                {"reason": reason, "tool_calls": len(tool_calls)},
+            )
+            return result
         output, structured = self._contract_output(
             raw_output, self.build_messages(task), ledger=ledger, run_id=run_id
         )
-        provider = self.client.provider_for(self.model)
         result = AgentResult(
             agent_name=self.name,
             department=self.department,

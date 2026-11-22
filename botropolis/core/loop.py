@@ -11,13 +11,26 @@ The model replies with either:
 Anything else is treated as the final answer. After each action the
 model receives an OBSERVATION: line with the tool result and continues
 until it answers or runs out of steps.
+
+The loop has three exits besides answering:
+
+- max_steps, the original cap on model calls.
+- Same-error exit: the same tool call failing with the same error
+  twice in a row stops the loop. Retrying an identical failure burns
+  budget without new information, so the run escalates instead.
+- Budgets: an optional token budget and wall-clock budget per run
+  (agent spec or run parameter). Going over either stops the run
+  cleanly with an escalated result naming the budget that was hit.
+
+Escalated exits return usage["escalated"] = True and
+usage["escalation_reason"], and the answer text says what happened.
 """
 
 from __future__ import annotations
 
 import json
 import time
-from typing import TYPE_CHECKING, Any, Dict, List, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 from botropolis.core.schemas import ToolCall
 from botropolis.tools import get_tool
@@ -144,11 +157,19 @@ def run_tool_loop(
     agent: "Agent",
     task: "Task",
     on_event=None,
-) -> Tuple[str, List[ToolCall], Dict[str, int]]:
+    token_budget: Optional[int] = None,
+    time_budget_seconds: Optional[float] = None,
+) -> Tuple[str, List[ToolCall], Dict[str, Any]]:
     """Run the think-act-observe loop for one task.
 
     Returns (final_answer, tool_calls, usage) where usage is
     {"input": n, "output": n} summed across the loop's model calls.
+    On an escalated exit (same-error or budget) usage also carries
+    "escalated": True and "escalation_reason": str.
+
+    token_budget and time_budget_seconds default to the agent's spec
+    values when not passed; passing a value here overrides the spec
+    for this run only.
 
     on_event, when given, is called as on_event(kind, payload) with
     ("tool_started", {"tool", "args"}) before each tool runs and
@@ -163,21 +184,59 @@ def run_tool_loop(
             on_event(kind, payload)
         except Exception:
             pass
+
+    if token_budget is None:
+        token_budget = getattr(agent, "token_budget", None)
+    if time_budget_seconds is None:
+        time_budget_seconds = getattr(agent, "time_budget_seconds", None)
+
     messages = agent.build_messages(task)
     system = messages[0]["content"] + "\n\n" + tool_prompt(agent.toolkit)
     convo = [{"role": "system", "content": system}] + messages[1:]
 
     tool_calls: List[ToolCall] = []
-    usage = {"input": 0, "output": 0}
+    usage: Dict[str, Any] = {"input": 0, "output": 0}
     last_text = ""
     max_steps = max(1, agent.max_steps)
+    loop_started = time.time()
+    last_failure: Optional[Tuple[str, str, str]] = None
+    failure_streak = 0
+
+    def escalate(reason: str) -> Tuple[str, List[ToolCall], Dict[str, Any]]:
+        usage["escalated"] = True
+        usage["escalation_reason"] = reason
+        return f"Escalated: {reason}", tool_calls, usage
+
+    def over_time_budget() -> bool:
+        return (
+            time_budget_seconds is not None
+            and time.time() - loop_started > time_budget_seconds
+        )
 
     for _ in range(max_steps):
+        if over_time_budget():
+            return escalate(
+                f"time budget exceeded: {time.time() - loop_started:.1f}s "
+                f"elapsed, budget is {time_budget_seconds}s"
+            )
         text = agent.client.chat(agent.model, convo)
         last_text = text
         reported = getattr(agent.client, "last_usage", None) or {}
         usage["input"] += int(reported.get("input", 0) or 0)
         usage["output"] += int(reported.get("output", 0) or 0)
+
+        if token_budget is not None:
+            used = usage["input"] + usage["output"]
+            if used > token_budget:
+                return escalate(
+                    f"token budget exceeded: {used} tokens used, "
+                    f"budget is {token_budget}"
+                )
+        if over_time_budget():
+            return escalate(
+                f"time budget exceeded: {time.time() - loop_started:.1f}s "
+                f"elapsed, budget is {time_budget_seconds}s"
+            )
 
         kind, payload = parse_model_reply(text)
         if kind == "final":
@@ -196,9 +255,26 @@ def run_tool_loop(
             tool_calls.append(call)
             emit("tool_finished", call.to_dict())
             if call.success:
+                last_failure = None
+                failure_streak = 0
                 observation = call.result_preview or "(empty result)"
             else:
                 observation = f"Tool call failed: {call.result_preview}"
+                signature = (
+                    call.tool,
+                    json.dumps(call.args, sort_keys=True, default=str),
+                    call.result_preview,
+                )
+                if signature == last_failure:
+                    failure_streak += 1
+                else:
+                    last_failure = signature
+                    failure_streak = 1
+                if failure_streak >= 2:
+                    return escalate(
+                        f"tool '{call.tool}' failed twice in a row with "
+                        f"the same error: {call.result_preview}"
+                    )
         convo.append({"role": "user", "content": f"{OBSERVATION_PREFIX} {observation}"})
 
     # Out of steps: return the last thing the model said. The tool calls
