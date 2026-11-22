@@ -1,0 +1,16 @@
+name: math_multi_step
+description: Agent solves a quadratic with the math tool, then checks the larger root by substitution.
+toolkit: [math]
+task: Solve x^2 - 5x + 6 = 0 and verify the larger root.
+replies:
+  - 'ACTION: {"tool": "math", "args": {"operation": "solve", "expression": "x^2 - 5*x + 6 = 0"}}'
+  - 'ACTION: {"tool": "math", "args": {"operation": "eval", "expression": "3^2 - 5*3 + 6"}}'
+  - "FINAL: {\"summary\": \"The roots are 2 and 3. Substituting 3 back gives 0, so the larger root checks out.\", \"details\": \"solve returned x = 2 and x = 3; eval of the original expression at 3 returned 0.\", \"key_points\": [\"roots: 2, 3\", \"check at 3: 0\"]}"
+expect:
+  output_contains: "roots are 2 and 3"
+  tool_call_count: 2
+  tool_calls:
+    - tool: math
+      args: {operation: solve, expression: "x^2 - 5*x + 6 = 0"}
+    - tool: math
+      args: {operation: eval, expression: "3^2 - 5*3 + 6"}

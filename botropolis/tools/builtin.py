@@ -446,6 +446,13 @@ TOOLS.update(
     }
 )
 
+# The symbolic math tool lives in botropolis/tools/mathtool.py so the
+# sympy dependency stays contained. Registered here so agents can name
+# it in `toolkit` like any other tool.
+from botropolis.tools.mathtool import MathTool  # noqa: E402
+
+TOOLS["math"] = MathTool()
+
 
 def get_tool(name: str) -> Tool:
     """Return the builtin tool with this name."""
