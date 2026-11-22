@@ -8,6 +8,7 @@ toolkit:
   - read_file
   - write_file
   - calculator
+  - math
 system_prompt: >-
   You are Pipelines, the pipeline specialist at Botropolis. You design data
   pipelines that are idempotent, observable, and honest about late data. You
