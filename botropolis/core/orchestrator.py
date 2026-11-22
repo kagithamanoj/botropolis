@@ -11,6 +11,7 @@ import time
 from typing import Dict, List, Optional, Tuple
 
 from botropolis.core.agent import Agent
+from botropolis.core.evidence import run_checks
 from botropolis.core.ledger import Ledger, new_run_id
 from botropolis.core.models import ModelClient
 from botropolis.core.registry import AgentRegistry
@@ -144,6 +145,26 @@ class CEO:
         except Exception:
             pass
 
+    def _verify(self, run_id: str, contract: Optional[Contract], report) -> None:
+        """Run a contract's machine checks and attach the evidence.
+
+        The builder/judge split: agents claim the work is done, the
+        harness checks before the report is final. All checks passing
+        keeps status "done"; any failure makes it "unverified". No
+        checks, nothing changes.
+        """
+        if contract is None or not contract.checks:
+            return
+        evidence = run_checks(contract.checks)
+        report.evidence = evidence
+        passed = sum(1 for item in evidence if item.passed)
+        report.status = "done" if passed == len(evidence) else "unverified"
+        self._record(
+            run_id,
+            "evidence_checked",
+            {"passed": passed, "total": len(evidence), "status": report.status},
+        )
+
     def score_departments(self, request: str) -> List[Tuple[str, int]]:
         """Score departments by keyword hits, highest first."""
         lowered = request.lower()
@@ -249,6 +270,7 @@ class CEO:
                 contract=contract,
                 elapsed_seconds=time.time() - started,
             )
+            self._verify(run_id, contract, report)
         except Exception as exc:
             self._record(run_id, "run_failed", {"error": str(exc)})
             raise
@@ -331,6 +353,7 @@ class CEO:
                 contract=contract,
                 elapsed_seconds=time.time() - started,
             )
+            self._verify(run_id, contract, report)
         except Exception as exc:
             self._record(run_id, "run_failed", {"error": str(exc)})
             raise

@@ -56,6 +56,15 @@ class ChatTurn(BaseModel):
     content: str = Field(..., min_length=1, max_length=4000)
 
 
+class ContractCheckIn(BaseModel):
+    """One machine check on a contract: a shell command and the exit
+    code that counts as passing."""
+
+    command: str = Field(..., min_length=1, description="Shell command, run in the agent sandbox")
+    expected_exit_code: int = Field(default=0, description="Exit code that means the check passed")
+    name: str = Field(default="", description="Optional label for the check")
+
+
 class ContractIn(BaseModel):
     """A task contract: the agreement the run is held to."""
 
@@ -66,6 +75,10 @@ class ContractIn(BaseModel):
     )
     done_when: List[str] = Field(
         default_factory=list, description="Checks that define done, in words"
+    )
+    checks: List[ContractCheckIn] = Field(
+        default_factory=list,
+        description="Machine checks run before the report is finalized",
     )
 
 
