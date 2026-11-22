@@ -175,6 +175,11 @@ def run_tool_loop(
     values when not passed; passing a value here overrides the spec
     for this run only.
 
+    The approval wall: tools named in task.needs_approval do not run
+    unless task.approved is set. A blocked call never executes; it is
+    recorded like any other call, reported to the model as blocked,
+    and does not count toward the same-error exit.
+
     When store and run_id are given, run state is written after every
     step (see botropolis/core/runstate.py). resume_state, a state dict
     loaded from that store, seeds the conversation with the completed
@@ -322,7 +327,24 @@ def run_tool_loop(
         else:
             tool_name, args = payload
             emit("tool_started", {"tool": tool_name, "args": args})
-            call = execute_tool_call(agent.toolkit, tool_name, args)
+            blocked = tool_name in task.needs_approval and not task.approved
+            if blocked:
+                # The approval wall: a flagged tool on an unapproved
+                # run never executes. The model is told plainly, the
+                # call is recorded, and the loop carries on.
+                call = ToolCall(
+                    tool=tool_name,
+                    args=args,
+                    success=False,
+                    result_preview=(
+                        f"Tool '{tool_name}' needs human approval and "
+                        "this run is not approved. The call did not run."
+                    ),
+                    elapsed_ms=0.0,
+                )
+                emit("tool_blocked", call.to_dict())
+            else:
+                call = execute_tool_call(agent.toolkit, tool_name, args)
             tool_calls.append(call)
             emit("tool_finished", call.to_dict())
             save_state("running")
@@ -330,6 +352,14 @@ def run_tool_loop(
                 last_failure = None
                 failure_streak = 0
                 observation = call.result_preview or "(empty result)"
+            elif blocked:
+                # A block is the wall working, not a tool failure, so
+                # it does not count toward the same-error exit.
+                observation = (
+                    f"Tool call blocked: {call.result_preview} Do not "
+                    "retry it. Continue without it, or finish with "
+                    "what you have."
+                )
             else:
                 observation = f"Tool call failed: {call.result_preview}"
                 signature = (

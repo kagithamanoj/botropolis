@@ -324,6 +324,8 @@ class Agent:
         def emit_and_record(kind: str, payload: Dict[str, Any]) -> None:
             if kind == "tool_finished":
                 self._record(ledger, run_id, "tool_called", payload)
+            if kind == "tool_blocked":
+                self._record(ledger, run_id, "tool_blocked", payload)
             if on_event is not None:
                 on_event(kind, payload)
 
