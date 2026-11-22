@@ -31,7 +31,7 @@ from botropolis.tools.gws import (
     GmailReadTool,
     GmailSearchTool,
 )
-from botropolis.tools.jobs import JobSearchTool
+from botropolis.tools.jobs import JobApplyTool, JobSearchTool
 from botropolis.tools.mathtool import MathTool
 
 __all__ = [
@@ -44,6 +44,7 @@ __all__ = [
     "GmailDraftTool",
     "GmailReadTool",
     "GmailSearchTool",
+    "JobApplyTool",
     "JobSearchTool",
     "ListDirTool",
     "MathTool",

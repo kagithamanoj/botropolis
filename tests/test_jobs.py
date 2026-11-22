@@ -3,6 +3,7 @@ payload shaped like the real API response; nothing here touches the
 network."""
 
 import copy
+import json
 
 import pytest
 import requests
@@ -158,3 +159,103 @@ def test_search_wrong_shape_payload_is_a_loud_error(job_search, monkeypatch):
     monkeypatch.setattr(jobs, "_fetch_feed", lambda: {"jobs": []})
     with pytest.raises(ValueError, match="unexpected shape"):
         job_search.execute(keywords="python")
+
+
+# --- job_apply -------------------------------------------------------
+
+
+@pytest.fixture()
+def job_apply(monkeypatch, tmp_path):
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    (workspace / "resume.txt").write_text("Jane Doe, python engineer\n")
+    monkeypatch.setenv("BOTROPOLIS_WORKSPACE", str(workspace))
+    log = tmp_path / "applications.jsonl"
+    monkeypatch.setenv("BOTROPOLIS_APPLICATIONS_LOG", str(log))
+    return get_tool("job_apply"), log
+
+
+def test_apply_records_the_application(job_apply):
+    tool, log = job_apply
+    out = tool.execute(
+        title="Senior Python Engineer",
+        company="Acme Corp",
+        url="https://remoteok.com/remote-jobs/101",
+        resume="resume.txt",
+    )
+    assert out["status"] == "prepared"
+    assert out["apply_url"] == "https://remoteok.com/remote-jobs/101"
+
+    lines = log.read_text(encoding="utf-8").strip().splitlines()
+    assert len(lines) == 1
+    record = json.loads(lines[0])
+    assert record["title"] == "Senior Python Engineer"
+    assert record["company"] == "Acme Corp"
+    assert record["url"] == "https://remoteok.com/remote-jobs/101"
+    assert record["resume"] == "resume.txt"
+    assert record["status"] == "prepared"
+    assert record["timestamp"]
+    assert out["application"] == record
+
+
+def test_apply_missing_resume_is_a_loud_error(job_apply):
+    tool, log = job_apply
+    with pytest.raises(ValueError, match="resume not found"):
+        tool.execute(
+            title="Senior Python Engineer",
+            company="Acme Corp",
+            url="https://remoteok.com/remote-jobs/101",
+            resume="no_such_resume.txt",
+        )
+    assert not log.exists()
+
+
+def test_apply_duplicate_warns_and_writes_nothing_new(job_apply):
+    tool, log = job_apply
+    tool.execute(
+        title="Senior Python Engineer",
+        company="Acme Corp",
+        url="https://remoteok.com/remote-jobs/101",
+        resume="resume.txt",
+    )
+    out = tool.execute(
+        title="senior python engineer",
+        company="ACME CORP",
+        url="https://remoteok.com/remote-jobs/101",
+        resume="resume.txt",
+    )
+    assert out["status"] == "duplicate"
+    assert "already recorded" in out["warning"]
+    lines = log.read_text(encoding="utf-8").strip().splitlines()
+    assert len(lines) == 1
+
+
+def test_apply_different_role_at_same_company_is_not_a_duplicate(job_apply):
+    tool, log = job_apply
+    tool.execute(
+        title="Senior Python Engineer",
+        company="Acme Corp",
+        url="https://remoteok.com/remote-jobs/101",
+        resume="resume.txt",
+    )
+    out = tool.execute(
+        title="Data Engineer",
+        company="Acme Corp",
+        url="https://remoteok.com/remote-jobs/103",
+        resume="resume.txt",
+    )
+    assert out["status"] == "prepared"
+    lines = log.read_text(encoding="utf-8").strip().splitlines()
+    assert len(lines) == 2
+
+
+def test_apply_resume_outside_the_workspace_is_refused(job_apply):
+    tool, log = job_apply
+    with pytest.raises(ValueError, match="escapes the workspace"):
+        tool.execute(
+            title="Senior Python Engineer",
+            company="Acme Corp",
+            url="https://remoteok.com/remote-jobs/101",
+            resume="../outside.txt",
+        )
+    assert not log.exists()

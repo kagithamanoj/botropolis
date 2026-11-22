@@ -62,6 +62,9 @@ Thumbs.db
 # Usage analytics (local only, never committed)
 botropolis/data/usage.jsonl
 
+# Prepared job applications (local only, never committed)
+botropolis/data/applications.jsonl
+
 # Run state for resumable tool runs (local only, never committed)
 botropolis/data/runs/
 

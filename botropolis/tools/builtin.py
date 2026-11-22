@@ -456,9 +456,10 @@ TOOLS["math"] = MathTool()
 # The job hunting tools live in botropolis/tools/jobs.py so the feed
 # handling stays in one place. Registered here so agents can name them
 # in `toolkit` like any other tool.
-from botropolis.tools.jobs import JobSearchTool  # noqa: E402
+from botropolis.tools.jobs import JobApplyTool, JobSearchTool  # noqa: E402
 
 TOOLS["job_search"] = JobSearchTool()
+TOOLS["job_apply"] = JobApplyTool()
 
 
 def get_tool(name: str) -> Tool:
