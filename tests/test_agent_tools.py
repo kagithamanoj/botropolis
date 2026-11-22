@@ -179,3 +179,17 @@ def test_builtin_agents_with_toolkits_load():
     assert registry.get("scout").toolkit == ["web_search", "web_fetch", "job_search"]
     assert "shell" in registry.get("coder").toolkit
     assert registry.get("Support").toolkit == []
+
+
+def test_devops_is_the_cloud_architect():
+    from botropolis.core.registry import AgentRegistry
+
+    registry = AgentRegistry()
+    agent = registry.get("devops")
+    assert agent.title == "Cloud Solutions Architect"
+    assert agent.department == "code"
+    assert agent.toolkit == ["web_search", "web_fetch", "calculator"]
+    for cloud in ("AWS", "GCP", "Azure"):
+        assert cloud in agent.specialty
+        assert cloud in agent.system_prompt
+    assert "migration" in agent.system_prompt.lower()
