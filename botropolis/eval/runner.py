@@ -21,11 +21,25 @@ Scenario shape:
         - tool: calculator
           args: {expression: "6 * 7"}
 
+Scenarios that need files or a stubbed data source can also set:
+
+    env: {BOTROPOLIS_WORKSPACE: "{tmp}/workspace"}
+    setup_files: {workspace/resume.txt: "resume contents"}
+    expect:
+      file_contains:
+        - path: "{tmp}/applications.jsonl"
+          contains: "Acme Corp"
+
+`env` values and file paths may use {tmp} (a fresh temp directory for
+the run) and {scenarios} (the bundled scenarios directory). Environment
+variables are restored when the run ends.
+
 Run all scenarios with: python -m botropolis.eval.runner
 """
 
 from __future__ import annotations
 
+import os
 import sys
 import tempfile
 from dataclasses import dataclass, field
@@ -100,60 +114,104 @@ def _check_tool_calls(
     return problems
 
 
+def _expand(text: Any, tmp_dir: Path) -> str:
+    """Expand the {tmp} and {scenarios} placeholders in scenario text."""
+    return str(text).replace("{tmp}", str(tmp_dir)).replace(
+        "{scenarios}", str(SCENARIOS_DIR)
+    )
+
+
 def run_scenario(scenario: Dict[str, Any]) -> EvalResult:
     """Run one scenario dict. Never raises; failures become details."""
     name = scenario.get("name", "<unnamed>")
     details: List[str] = []
-    try:
-        spec = {
-            "name": "EvalAgent",
-            "title": "Eval agent",
-            "department": "research",
-            "specialty": "scenario evals",
-            "model": "stub",
-            "system_prompt": "You are an eval agent.",
-            "toolkit": scenario.get("toolkit", []),
-        }
-        with tempfile.NamedTemporaryFile(
-            "w", suffix=".yaml", delete=False, encoding="utf-8"
-        ) as fh:
-            yaml.safe_dump(spec, fh)
-            spec_path = Path(fh.name)
-        agent = Agent(spec_path, client=ScriptedClient(scenario.get("replies", [])))
-        result = agent.run(
-            Task(
-                description=scenario.get("task", ""),
-                department="research",
-                agent_name="EvalAgent",
-            )
-        )
-    except Exception as exc:  # noqa: BLE001 - evals must not crash the runner
-        return EvalResult(name=name, passed=False, details=[f"error: {exc}"])
+    with tempfile.TemporaryDirectory() as tmp_name:
+        tmp_dir = Path(tmp_name)
+        saved_env: Dict[str, Optional[str]] = {}
+        try:
+            for key, value in (scenario.get("env") or {}).items():
+                saved_env[key] = os.environ.get(key)
+                os.environ[key] = _expand(value, tmp_dir)
+            for rel, content in (scenario.get("setup_files") or {}).items():
+                dest = tmp_dir / _expand(rel, tmp_dir)
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                dest.write_text(str(content), encoding="utf-8")
+            try:
+                spec = {
+                    "name": "EvalAgent",
+                    "title": "Eval agent",
+                    "department": "research",
+                    "specialty": "scenario evals",
+                    "model": "stub",
+                    "system_prompt": "You are an eval agent.",
+                    "toolkit": scenario.get("toolkit", []),
+                }
+                with tempfile.NamedTemporaryFile(
+                    "w", suffix=".yaml", delete=False, encoding="utf-8"
+                ) as fh:
+                    yaml.safe_dump(spec, fh)
+                    spec_path = Path(fh.name)
+                agent = Agent(
+                    spec_path, client=ScriptedClient(scenario.get("replies", []))
+                )
+                result = agent.run(
+                    Task(
+                        description=scenario.get("task", ""),
+                        department="research",
+                        agent_name="EvalAgent",
+                    )
+                )
+            except Exception as exc:  # noqa: BLE001 - evals must not crash the runner
+                return EvalResult(name=name, passed=False, details=[f"error: {exc}"])
 
-    expect = scenario.get("expect", {}) or {}
-    if "output_contains" in expect:
-        if expect["output_contains"] not in (result.output or ""):
-            details.append(
-                f"output does not contain {expect['output_contains']!r}"
-            )
-    if "output_equals" in expect:
-        if (result.output or "").strip() != str(expect["output_equals"]).strip():
-            details.append(
-                f"output {result.output!r} != {expect['output_equals']!r}"
-            )
-    if "tool_call_count" in expect:
-        if len(result.tool_calls) != expect["tool_call_count"]:
-            details.append(
-                f"expected {expect['tool_call_count']} tool calls, "
-                f"got {len(result.tool_calls)}"
-            )
-    if "tool_calls" in expect:
-        details.extend(_check_tool_calls(expect["tool_calls"], result.tool_calls))
-    if expect.get("success") is not None:
-        if result.success != expect["success"]:
-            details.append(f"expected success={expect['success']}, got {result.success}")
+            expect = scenario.get("expect", {}) or {}
+            if "output_contains" in expect:
+                if expect["output_contains"] not in (result.output or ""):
+                    details.append(
+                        f"output does not contain {expect['output_contains']!r}"
+                    )
+            if "output_equals" in expect:
+                if (result.output or "").strip() != str(
+                    expect["output_equals"]
+                ).strip():
+                    details.append(
+                        f"output {result.output!r} != {expect['output_equals']!r}"
+                    )
+            if "tool_call_count" in expect:
+                if len(result.tool_calls) != expect["tool_call_count"]:
+                    details.append(
+                        f"expected {expect['tool_call_count']} tool calls, "
+                        f"got {len(result.tool_calls)}"
+                    )
+            if "tool_calls" in expect:
+                details.extend(_check_tool_calls(expect["tool_calls"], result.tool_calls))
+            if expect.get("success") is not None:
+                if result.success != expect["success"]:
+                    details.append(
+                        f"expected success={expect['success']}, got {result.success}"
+                    )
+            for check in expect.get("file_contains") or []:
+                path = Path(_expand(check.get("path", ""), tmp_dir))
+                needle = str(check.get("contains", ""))
+                try:
+                    content = path.read_text(encoding="utf-8")
+                except OSError:
+                    details.append(
+                        f"expected file {check.get('path')} to exist after the run"
+                    )
+                    continue
+                if needle not in content:
+                    details.append(
+                        f"file {check.get('path')} does not contain {needle!r}"
+                    )
 
-    return EvalResult(name=name, passed=not details, details=details)
+            return EvalResult(name=name, passed=not details, details=details)
+        finally:
+            for key, value in saved_env.items():
+                if value is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = value
 
 
 def run_all(directory: Path = SCENARIOS_DIR) -> List[EvalResult]:

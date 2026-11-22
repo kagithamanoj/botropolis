@@ -170,6 +170,8 @@ def test_ops_agents_carry_the_new_toolkits():
         "gmail_draft",
         "notes_read",
         "notes_append",
+        "job_search",
+        "job_apply",
     ]
     scheduler_agent = registry.get("Scheduler")
     assert scheduler_agent.toolkit == [

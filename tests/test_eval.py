@@ -67,3 +67,38 @@ def test_run_all_loads_bundled_scenarios():
     assert all(r.passed for r in results), [
         (r.name, r.details) for r in results if not r.passed
     ]
+
+
+def test_scenario_env_setup_files_and_file_contains():
+    scenario = _scenario(
+        toolkit=["job_apply"],
+        env={
+            "BOTROPOLIS_WORKSPACE": "{tmp}/workspace",
+            "BOTROPOLIS_APPLICATIONS_LOG": "{tmp}/applications.jsonl",
+        },
+        setup_files={"workspace/resume.txt": "Eval resume."},
+        replies=[
+            'ACTION: {"tool": "job_apply", "args": {"title": "Dev", "company": "Acme Corp", "url": "https://example.com/jobs/1", "resume": "resume.txt"}}',
+            'FINAL: {"summary": "prepared", "details": "", "key_points": []}',
+        ],
+        expect={
+            "output_contains": "prepared",
+            "file_contains": [
+                {"path": "{tmp}/applications.jsonl", "contains": "Acme Corp"}
+            ],
+        },
+    )
+    result = run_scenario(scenario)
+    assert result.passed is True, result.details
+
+
+def test_scenario_file_contains_missing_file_fails():
+    scenario = _scenario(
+        expect={
+            "output_contains": "done",
+            "file_contains": [{"path": "{tmp}/never_written.txt", "contains": "x"}],
+        }
+    )
+    result = run_scenario(scenario)
+    assert result.passed is False
+    assert any("never_written" in d for d in result.details)

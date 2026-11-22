@@ -9,6 +9,8 @@ toolkit:
   - gmail_draft
   - notes_read
   - notes_append
+  - job_search
+  - job_apply
 system_prompt: >-
   You are Inbox, the communications specialist at Botropolis. You
   triage messy inboxes into what needs a reply, what needs a decision, and

@@ -200,10 +200,11 @@ toolkit:
   - web_fetch
 ```
 
-Current toolkits: Scout and FactChecker get web search and fetch; Coder
+Current toolkits: Scout and FactChecker get web search and fetch, and
+Scout also gets job search; Coder
 gets shell plus file tools; Reviewer gets file reading; Pipelines and
 Trainer get shell, file tools, the calculator, and the math tool; Inbox gets Gmail
-search, read, and draft; Scheduler gets calendar agenda and event
+search, read, and draft, plus job search and job apply; Scheduler gets calendar agenda and event
 creation. Every other agent
 has no toolkit and behaves exactly as before: one model call, one answer.
 
@@ -235,7 +236,9 @@ Available tools: `web_search` (DuckDuckGo, no key needed), `web_fetch`
 (page text extraction), `shell`, `read_file`, `write_file`, `list_dir`,
 `calculator`, `math` (symbolic algebra and calculus via sympy),
 `current_time`, `gmail_search`, `gmail_read`, `gmail_draft`,
-`calendar_agenda`, `calendar_create_event`, `notes_append`, `notes_read`.
+`calendar_agenda`, `calendar_create_event`, `notes_append`, `notes_read`,
+`job_search` (RemoteOK postings by keyword), `job_apply` (records an
+application package locally; it does not submit anything).
 
 `notes_append` and `notes_read` share one company notebook
 (`botropolis/data/workspace/notes.md`, gitignored): agents can remember
@@ -279,11 +282,12 @@ python -m botropolis.eval.runner
 
 ```
 [PASS] calculator_two_step
+[PASS] job_search_and_apply
 [PASS] math_multi_step
 [PASS] plain_answer_no_tools
 [PASS] unknown_tool_is_refused
 
-4/4 scenarios passed
+5/5 scenarios passed
 ```
 
 Scenarios run with no model credentials and no network: the runner
