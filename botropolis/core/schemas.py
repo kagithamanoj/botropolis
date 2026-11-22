@@ -47,6 +47,41 @@ class Context:
 
 
 @dataclass
+class ContractCheck:
+    """One machine check that verifies a contracted run is done.
+
+    A shell command run inside the agent sandbox (same denylist and
+    workspace as the shell tool) plus the exit code that counts as
+    passing. The agent claims the work is done; the check is the
+    harness verifying the claim.
+    """
+
+    command: str
+    expected_exit_code: int = 0
+    name: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Return a JSON-serializable dict."""
+        return asdict(self)
+
+
+@dataclass
+class CheckResult:
+    """The outcome of one ContractCheck, attached to a report as
+    evidence: what ran, what it returned, and the tail of its output."""
+
+    command: str
+    expected_exit_code: int
+    exit_code: Optional[int]
+    passed: bool
+    output_tail: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Return a JSON-serializable dict."""
+        return asdict(self)
+
+
+@dataclass
 class Contract:
     """The agreement for one run: what is being done, what is in and
     out of scope, and what counts as done.
@@ -55,12 +90,17 @@ class Contract:
     run. The CEO attaches it to each task, agents see it in their
     prompt stated plainly, and the final report carries it back so a
     reader can check the work against what was actually agreed.
+
+    done_when is the human-readable definition of done. checks are
+    the machine-readable one: shell commands the harness runs before
+    the report is finalized (see botropolis/core/evidence.py).
     """
 
     goal: str
     scope: List[str] = field(default_factory=list)
     exclusions: List[str] = field(default_factory=list)
     done_when: List[str] = field(default_factory=list)
+    checks: List[ContractCheck] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         """Return a JSON-serializable dict."""
@@ -71,11 +111,24 @@ class Contract:
         """Rebuild a Contract from plain data. None in, None out."""
         if not data:
             return None
+        checks = []
+        for item in data.get("checks", []):
+            if isinstance(item, ContractCheck):
+                checks.append(item)
+            elif isinstance(item, dict):
+                checks.append(
+                    ContractCheck(
+                        command=str(item.get("command", "")),
+                        expected_exit_code=int(item.get("expected_exit_code", 0)),
+                        name=str(item.get("name", "")),
+                    )
+                )
         return cls(
             goal=str(data.get("goal", "")),
             scope=[str(item) for item in data.get("scope", [])],
             exclusions=[str(item) for item in data.get("exclusions", [])],
             done_when=[str(item) for item in data.get("done_when", [])],
+            checks=checks,
         )
 
 
@@ -141,13 +194,20 @@ class AgentResult:
 
 @dataclass
 class CompanyReport:
-    """The CEO's final report for one user request."""
+    """The CEO's final report for one user request.
+
+    status is "done" unless the contract carried machine checks and
+    one of them failed, in which case it is "unverified" and evidence
+    holds the check results.
+    """
 
     request: str
     departments_involved: List[str] = field(default_factory=list)
     results: List[AgentResult] = field(default_factory=list)
     summary: str = ""
     contract: Optional[Contract] = None
+    evidence: List[CheckResult] = field(default_factory=list)
+    status: str = "done"
     elapsed_seconds: float = 0.0
     created_at: float = field(default_factory=time.time)
 
@@ -178,13 +238,19 @@ class TeamRound:
 
 @dataclass
 class TeamReport:
-    """The CEO's report for one team collaboration session."""
+    """The CEO's report for one team collaboration session.
+
+    status follows the same rule as CompanyReport: "done", or
+    "unverified" when a contract check failed.
+    """
 
     request: str
     agents: List[str] = field(default_factory=list)
     rounds: List[TeamRound] = field(default_factory=list)
     synthesis: str = ""
     contract: Optional[Contract] = None
+    evidence: List[CheckResult] = field(default_factory=list)
+    status: str = "done"
     elapsed_seconds: float = 0.0
     created_at: float = field(default_factory=time.time)
 
