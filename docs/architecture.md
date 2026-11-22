@@ -70,12 +70,20 @@ always know when you are looking at stub output versus a real model call.
 
 ## Tools
 
-`botropolis/tools/builtin.py` defines the `Tool` base class and ten
+`botropolis/tools/builtin.py` defines the `Tool` base class and eleven
 builtin tools: `web_search`, `web_fetch`, `shell`, `calculator`,
 `read_file`, `write_file`, `list_dir`, `current_time`, `notes_append`,
-`notes_read`. Agents declare which tools they may use in their spec.
-`web_search` is stub-backed until you wire a real provider; the schema is
-stable so swapping the implementation is a one function change.
+`notes_read`, and `math`. Agents declare which tools they may use in
+their spec. `web_search` is stub-backed until you wire a real provider;
+the schema is stable so swapping the implementation is a one function
+change.
+
+The `math` tool (`botropolis/tools/mathtool.py`) does symbolic math
+with sympy: solve, simplify, factor, expand, derivatives, integrals,
+limits, series, and numeric evaluation. Parsing is defensive: the raw
+string passes a character whitelist and an identifier whitelist
+before sympy sees it, and the parser namespace holds only the allowed
+symbols and functions. Nothing evals Python.
 
 `botropolis/tools/gws.py` adds five Google Workspace tools:
 `gmail_search`, `gmail_read`, `gmail_draft`, `calendar_agenda`,
@@ -89,7 +97,8 @@ plainly instead of failing.
 
 `botropolis/core/schemas.py` has the dataclasses everything passes
 around: `Task` (work to do), `Context` (what the agent may know beyond
-the task: chat history, teammates' outputs), `ToolCall` (one tool
+the task: chat history, teammates' outputs), `Contract` (the agreement
+for a run, with its machine checks), `ToolCall` (one tool
 invocation), `AgentResult` (what one agent produced, including the
 validated `structured` answer), `CompanyReport` (the CEO's final
 answer), plus `TeamRound` and `TeamReport` for collaboration runs. All
@@ -112,13 +121,59 @@ events under one run id. The CEO keeps an in-memory ledger by default;
 pass `Ledger("checkpoints/runs.db")` to persist the trail. Recording
 never breaks a run: a failing ledger is swallowed, not propagated.
 
+## Harness
+
+The model is one part of a run. The harness around it is the rest:
+the contract the work is held to, the walls it cannot cross, the
+state it leaves behind, and the checks that decide whether "done"
+means done. Five pieces:
+
+**Contracts.** A `Contract` (goal, scope, exclusions, done_when, and
+optional machine checks) can be attached to a run through
+`CEO.handle()` and `CEO.team()`, or in the `POST /ask` body. The CEO
+puts it on every task, each agent sees it in its prompt stated
+plainly (exclusions as out of scope), the ledger notes it at run
+start, and the final report carries it back.
+
+**Loop exits.** The tool loop stops for more than `max_steps` now.
+The same tool call failing with the same error twice in a row ends
+the run: retrying an identical failure buys nothing. Agents can also
+carry a token budget and a time budget, in the spec or per run, and
+going over either stops the run. Both exits produce a failed result
+marked escalated with the reason, recorded as `run_escalated`.
+
+**Run state and resume.** Tool loops write their progress after
+every step (task, contract, completed tool calls with results,
+status) to `botropolis/data/runs/<run_id>.json`
+(`botropolis/core/runstate.py`, gitignored). `botropolis resume
+<run_id>` rebuilds the conversation from the completed steps and
+continues from the first unfinished one; finished tool calls are
+shown to the model as observations, not re-executed. A run that
+already finished says so and exits.
+
+**Done evidence.** A contract's machine checks are shell commands
+with an expected exit code (`botropolis/core/evidence.py`). Before
+the CEO finalizes a report for a contracted run, the checks run
+inside the agent sandbox and the results ride on the report as
+evidence. All passing keeps the report `done`; any failure makes it
+`unverified`. The agent claims, the harness verifies.
+
+**Approval wall.** A run can flag tools as needing approval
+(`needs_approval` on the task, `approved` for the human's yes). At
+dispatch, a flagged call on an unapproved run never executes: the
+model gets a blocked observation, the call is recorded on the
+result, and the ledger gets a `tool_blocked` event. Nothing is
+flagged by default.
+
 ## Server
 
 `botropolis/server.py` is a thin FastAPI layer over the CEO. The web
 layer does no reasoning of its own.
 
-- `POST /ask` takes a request string plus an optional chat history and
-  returns a `CompanyReport` as JSON.
+- `POST /ask` takes a request string plus an optional chat history
+  and returns a `CompanyReport` as JSON. The body also accepts an
+  optional contract and the approval wall fields (`needs_approval`,
+  `approved`); see the Harness section.
 - `POST /team` runs named agents in collaboration rounds and returns a
   `TeamReport`.
 - `GET /agents/{name}/ask/stream` streams one agent's run as
