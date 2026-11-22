@@ -1,0 +1,25 @@
+name: job_search_and_apply
+description: Agent searches the stubbed RemoteOK feed for python jobs, prepares an application to the top match, and the record lands in the applications log.
+toolkit: [job_search, job_apply]
+env:
+  BOTROPOLIS_JOBS_FEED_FILE: "{scenarios}/remoteok_sample.json"
+  BOTROPOLIS_APPLICATIONS_LOG: "{tmp}/applications.jsonl"
+  BOTROPOLIS_WORKSPACE: "{tmp}/workspace"
+setup_files:
+  workspace/resume.txt: "Eval resume. Python engineer, ten years of backend work."
+task: Find a python job and prepare an application to the top match using resume.txt.
+replies:
+  - 'ACTION: {"tool": "job_search", "args": {"keywords": "python"}}'
+  - 'ACTION: {"tool": "job_apply", "args": {"title": "Senior Python Engineer", "company": "Acme Corp", "url": "https://remoteok.com/remote-jobs/101", "resume": "resume.txt"}}'
+  - "FINAL: {\"summary\": \"Found 2 python jobs and prepared an application to Senior Python Engineer at Acme Corp.\", \"details\": \"job_search matched Acme Corp and Initech against the stubbed feed; job_apply recorded the Acme application as prepared, nothing was submitted.\", \"key_points\": [\"top match: Acme Corp\", \"status: prepared\"]}"
+expect:
+  output_contains: "Acme Corp"
+  tool_call_count: 2
+  tool_calls:
+    - tool: job_search
+      args: {keywords: python}
+    - tool: job_apply
+      args: {title: "Senior Python Engineer", company: "Acme Corp", url: "https://remoteok.com/remote-jobs/101", resume: "resume.txt"}
+  file_contains:
+    - path: "{tmp}/applications.jsonl"
+      contains: "Acme Corp"

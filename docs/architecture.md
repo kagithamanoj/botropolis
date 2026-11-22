@@ -93,6 +93,16 @@ send tool (agents draft, humans send), and calendar events are private
 only. When the Workspace CLI is not connected, the tools report that
 plainly instead of failing.
 
+`botropolis/tools/jobs.py` adds two job hunting tools. `job_search`
+reads the RemoteOK public feed and returns postings matched by keyword
+against title, company, and tags; a feed that cannot be fetched or
+parsed is an error, never a silent empty result. `job_apply` prepares
+an application without submitting anything: it checks the resume lives
+in the workspace, records the application in
+`botropolis/data/applications.jsonl`, and returns the apply url so a
+human or a browser flow does the actual submission. Recording the same
+title and company twice returns a warning instead of a duplicate.
+
 ## Schemas
 
 `botropolis/core/schemas.py` has the dataclasses everything passes
