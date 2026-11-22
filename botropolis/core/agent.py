@@ -197,6 +197,8 @@ class Agent:
         run_id: Optional[str] = None,
         token_budget: Optional[int] = None,
         time_budget_seconds: Optional[float] = None,
+        store=None,
+        resume_state=None,
     ) -> AgentResult:
         """Run one task and return an AgentResult.
 
@@ -211,10 +213,16 @@ class Agent:
         ledger and run_id are optional: when given, the run's events
         (task assigned, tools called, answer produced, contract repairs,
         failures) are appended to the ledger.
+
+        store and resume_state are for durable run state: with a store
+        (botropolis.core.runstate.RunStore), tool runs write their
+        progress after every step; with resume_state, a tool run
+        continues an interrupted run from its completed steps instead
+        of starting over. Both only affect agents with a toolkit.
         """
         if isinstance(task, str):
             task = Task(description=task, department=self.department, agent_name=self.name)
-        if ledger is not None and run_id is None:
+        if run_id is None and (ledger is not None or store is not None):
             run_id = new_run_id()
         started = time.time()
         try:
@@ -228,6 +236,8 @@ class Agent:
                     run_id=run_id,
                     token_budget=token_budget,
                     time_budget_seconds=time_budget_seconds,
+                    store=store,
+                    resume_state=resume_state,
                 )
             messages = self.build_messages(task)
             raw = self.client.chat(self.model, messages)
@@ -295,6 +305,8 @@ class Agent:
         run_id: Optional[str] = None,
         token_budget: Optional[int] = None,
         time_budget_seconds: Optional[float] = None,
+        store=None,
+        resume_state=None,
     ) -> AgentResult:
         """Run the think-act-observe loop and wrap it in an AgentResult.
 
@@ -321,6 +333,9 @@ class Agent:
             on_event=emit_and_record,
             token_budget=token_budget,
             time_budget_seconds=time_budget_seconds,
+            store=store,
+            run_id=run_id,
+            resume_state=resume_state,
         )
         provider = self.client.provider_for(self.model)
         if usage.get("escalated"):

@@ -37,6 +37,7 @@ from botropolis.tools import get_tool
 
 if TYPE_CHECKING:
     from botropolis.core.agent import Agent
+    from botropolis.core.runstate import RunStore
     from botropolis.core.schemas import Task
 
 ACTION_PREFIX = "ACTION:"
@@ -159,6 +160,9 @@ def run_tool_loop(
     on_event=None,
     token_budget: Optional[int] = None,
     time_budget_seconds: Optional[float] = None,
+    store: Optional["RunStore"] = None,
+    run_id: Optional[str] = None,
+    resume_state: Optional[Dict[str, Any]] = None,
 ) -> Tuple[str, List[ToolCall], Dict[str, Any]]:
     """Run the think-act-observe loop for one task.
 
@@ -170,6 +174,13 @@ def run_tool_loop(
     token_budget and time_budget_seconds default to the agent's spec
     values when not passed; passing a value here overrides the spec
     for this run only.
+
+    When store and run_id are given, run state is written after every
+    step (see botropolis/core/runstate.py). resume_state, a state dict
+    loaded from that store, seeds the conversation with the completed
+    steps so the run continues where it stopped instead of redoing
+    finished tool calls. Prior steps count against max_steps: each one
+    already used a model call.
 
     on_event, when given, is called as on_event(kind, payload) with
     ("tool_started", {"tool", "args"}) before each tool runs and
@@ -194,7 +205,34 @@ def run_tool_loop(
     system = messages[0]["content"] + "\n\n" + tool_prompt(agent.toolkit)
     convo = [{"role": "system", "content": system}] + messages[1:]
 
-    tool_calls: List[ToolCall] = []
+    # Resume: rebuild the tool calls and the conversation from the
+    # steps a previous, interrupted run already completed.
+    prior_steps: List[Dict[str, Any]] = []
+    if resume_state:
+        prior_steps = list(resume_state.get("steps") or [])
+    tool_calls: List[ToolCall] = [
+        ToolCall(
+            tool=str(step.get("tool", "")),
+            args=dict(step.get("args") or {}),
+            success=bool(step.get("success", True)),
+            result_preview=str(step.get("result_preview", "")),
+            elapsed_ms=float(step.get("elapsed_ms", 0.0) or 0.0),
+        )
+        for step in prior_steps
+    ]
+    for step in prior_steps:
+        action = json.dumps(
+            {"tool": step.get("tool"), "args": step.get("args") or {}}
+        )
+        convo.append({"role": "assistant", "content": f"{ACTION_PREFIX} {action}"})
+        if step.get("success", True):
+            observation = step.get("result_preview") or "(empty result)"
+        else:
+            observation = f"Tool call failed: {step.get('result_preview', '')}"
+        convo.append(
+            {"role": "user", "content": f"{OBSERVATION_PREFIX} {observation}"}
+        )
+
     usage: Dict[str, Any] = {"input": 0, "output": 0}
     last_text = ""
     max_steps = max(1, agent.max_steps)
@@ -202,9 +240,35 @@ def run_tool_loop(
     last_failure: Optional[Tuple[str, str, str]] = None
     failure_streak = 0
 
+    def save_state(
+        status: str,
+        answer: Optional[str] = None,
+        reason: Optional[str] = None,
+    ) -> None:
+        if store is None or run_id is None:
+            return
+        try:
+            store.save(
+                {
+                    "run_id": run_id,
+                    "agent": agent.name,
+                    "task": task.to_dict(),
+                    "contract": (
+                        task.contract.to_dict() if task.contract else None
+                    ),
+                    "steps": [call.to_dict() for call in tool_calls],
+                    "status": status,
+                    "answer": answer,
+                    "reason": reason,
+                }
+            )
+        except Exception:
+            pass
+
     def escalate(reason: str) -> Tuple[str, List[ToolCall], Dict[str, Any]]:
         usage["escalated"] = True
         usage["escalation_reason"] = reason
+        save_state("escalated", reason=reason)
         return f"Escalated: {reason}", tool_calls, usage
 
     def over_time_budget() -> bool:
@@ -213,7 +277,13 @@ def run_tool_loop(
             and time.time() - loop_started > time_budget_seconds
         )
 
-    for _ in range(max_steps):
+    if prior_steps and len(prior_steps) >= max_steps:
+        return escalate(
+            f"run already used all {max_steps} steps before it was "
+            "interrupted; nothing left to resume with"
+        )
+
+    for _ in range(max_steps - len(prior_steps)):
         if over_time_budget():
             return escalate(
                 f"time budget exceeded: {time.time() - loop_started:.1f}s "
@@ -240,6 +310,7 @@ def run_tool_loop(
 
         kind, payload = parse_model_reply(text)
         if kind == "final":
+            save_state("finished", answer=payload)
             return payload, tool_calls, usage
 
         convo.append({"role": "assistant", "content": text})
@@ -254,6 +325,7 @@ def run_tool_loop(
             call = execute_tool_call(agent.toolkit, tool_name, args)
             tool_calls.append(call)
             emit("tool_finished", call.to_dict())
+            save_state("running")
             if call.success:
                 last_failure = None
                 failure_streak = 0
@@ -279,4 +351,5 @@ def run_tool_loop(
 
     # Out of steps: return the last thing the model said. The tool calls
     # made so far are still recorded on the result.
+    save_state("finished", answer=last_text)
     return last_text, tool_calls, usage
