@@ -88,7 +88,7 @@ class AskRequest(BaseModel):
     request: str = Field(..., min_length=1, description="What you want the company to do")
     history: List[ChatTurn] = Field(
         default_factory=list,
-        max_length=20,
+        max_length=40,
         description="Earlier chat turns, oldest first",
     )
     contract: ContractIn | None = Field(
@@ -202,7 +202,7 @@ def _parse_history_param(raw: str) -> list:
         return []
     clean = []
     if isinstance(turns, list):
-        for turn in turns[-20:]:
+        for turn in turns[-40:]:
             if (
                 isinstance(turn, dict)
                 and turn.get("role") in ("user", "assistant")

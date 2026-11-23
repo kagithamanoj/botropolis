@@ -77,7 +77,7 @@ def test_ask_rejects_too_much_history():
         "/ask",
         json={
             "request": "hi",
-            "history": [{"role": "user", "content": "x"} for _ in range(25)],
+            "history": [{"role": "user", "content": "x"} for _ in range(45)],
         },
     )
     assert resp.status_code == 422
@@ -144,9 +144,9 @@ def test_parse_history_param():
         ]
     )
     assert _parse_history_param(mixed) == [{"role": "user", "content": "ok"}]
-    # capped at 20
-    many = json.dumps([{"role": "user", "content": "x"} for _ in range(30)])
-    assert len(_parse_history_param(many)) == 20
+    # capped at 40
+    many = json.dumps([{"role": "user", "content": "x"} for _ in range(50)])
+    assert len(_parse_history_param(many)) == 40
 
 
 def test_stream_accepts_history_param():
