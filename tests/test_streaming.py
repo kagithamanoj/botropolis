@@ -78,6 +78,7 @@ def test_loop_emits_tool_events_in_order(tmp_path):
         "tool_finished",
         "tool_started",
         "tool_finished",
+        "answer_checked",
     ]
     assert seen[0][1]["tool"] == "calculator"
     assert seen[0][1]["args"] == {"expression": "2 + 3"}
@@ -154,12 +155,18 @@ def test_stream_events_flow_end_to_end(tmp_path):
     agent = make_agent(tmp_path, toolkit=["calculator"], replies=replies)
     events = collect_events(agent, "multiply six by seven")
     kinds = [k for k, _ in events]
-    assert kinds == ["tool_started", "tool_finished", "result", "done"]
+    assert kinds == [
+        "tool_started",
+        "tool_finished",
+        "answer_checked",
+        "result",
+        "done",
+    ]
     started = events[0][1]
     assert started["tool"] == "calculator"
     assert started["args"] == {"expression": "6 * 7"}
     finished = events[1][1]
     assert finished["success"] is True
-    result = events[2][1]
+    result = events[3][1]
     assert result["output"] == "42"
     assert len(result["tool_calls"]) == 1
