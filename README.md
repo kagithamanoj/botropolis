@@ -210,7 +210,9 @@ Trainer get shell, file tools, the calculator, and the math tool; Inbox gets Gma
 search, read, and draft, plus job search and job apply; Scheduler gets calendar agenda and event
 creation. Every agent with a toolkit also gets the memory tools
 (`memory_save`, `memory_recall`), so anything learned on a run can be
-kept and found again later. Every other agent
+kept and found again later, and `consult`, so an agent can ask the
+specialist whose field a question belongs to instead of guessing.
+Every other agent
 has no toolkit and behaves exactly as before: one model call, one answer.
 
 When an agent has a toolkit, it runs a think-act-observe loop instead of
@@ -226,7 +228,11 @@ FINAL: <the answer>
 The model thinks, emits an ACTION, gets back an `OBSERVATION:` with the
 tool result, and repeats until it replies with FINAL. Anything that is
 not an ACTION line counts as the final answer, which keeps weak models
-and the stub safe by default. Loops stop after `max_steps` (default 8,
+and the stub safe by default. Two habits are built into the loop: a run
+may open with a short plan (a first reply starting with `PLAN:`, which
+the loop records before telling the model to begin), and a final answer
+is checked once against the task before it is accepted, with one
+revision allowed. Loops stop after `max_steps` (default 8,
 configurable per agent in YAML). They also stop early, with a failed
 result marked escalated, when the same tool call fails with the same
 error twice in a row, or when a run goes over its token budget or time
@@ -244,7 +250,9 @@ Available tools: `web_search` (DuckDuckGo, no key needed), `web_fetch`
 `calendar_agenda`, `calendar_create_event`, `notes_append`, `notes_read`,
 `job_search` (RemoteOK postings by keyword), `job_apply` (records an
 application package locally; it does not submit anything), `memory_save`
-and `memory_recall` (the company long-term memory, below).
+and `memory_recall` (the company long-term memory, below), and `consult`
+(ask another agent a question mid-task; no self-consults, no chains,
+three per run).
 
 `notes_append` and `notes_read` share one company notebook
 (`botropolis/data/workspace/notes.md`, gitignored): agents can remember
@@ -295,18 +303,26 @@ python -m botropolis.eval.runner
 ```
 
 ```
+[PASS] ambiguous_request_asks_first
 [PASS] calculator_two_step
+[PASS] conflicting_sources_surfaced
+[PASS] consult_specialist
 [PASS] job_search_and_apply
 [PASS] math_multi_step
 [PASS] memory_save_and_recall
 [PASS] plain_answer_no_tools
+[PASS] tool_failure_adapts
 [PASS] unknown_tool_is_refused
 
-6/6 scenarios passed
+10/10 scenarios passed
 ```
 
 Scenarios run with no model credentials and no network: the runner
-plays the replies through a real Agent and checks the outcome. Add a
+plays the replies through a real Agent and checks the outcome. Alongside
+the tool-use basics, the set covers the hard cases: an ambiguous request
+that should be questioned rather than invented, two sources that
+conflict and must be reported as a conflict, a tool failure mid-task
+that the agent has to adapt to, and a consult with a specialist. Add a
 new file under `botropolis/eval/scenarios/` to cover a behavior you
 care about. A failing scenario exits non-zero with the mismatch
 spelled out.

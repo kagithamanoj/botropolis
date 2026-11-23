@@ -1,0 +1,23 @@
+name: conflicting_sources_surfaced
+description: Two status snapshots disagree about whether the payments API is up. The agent must surface the conflict and say which source is fresher, not silently pick one.
+toolkit: [read_file]
+env:
+  BOTROPOLIS_WORKSPACE: "{tmp}/workspace"
+setup_files:
+  workspace/status_morning.txt: "Status page snapshot, 09:00. Payments API: operational. All checks passing."
+  workspace/status_midday.txt: "Status page snapshot, 12:30. Payments API: DOWN. Maintenance window opened after a failed deploy."
+task: Read both status snapshots in the workspace and tell me whether the payments API is up.
+replies:
+  - 'ACTION: {"tool": "read_file", "args": {"path": "status_morning.txt"}}'
+  - 'ACTION: {"tool": "read_file", "args": {"path": "status_midday.txt"}}'
+  - "FINAL: {\"summary\": \"The two snapshots disagree, so the honest answer is not a plain yes or no. The 09:00 snapshot says the payments API is operational; the 12:30 snapshot says it is down for maintenance after a failed deploy. The midday snapshot is the fresher source and the one to act on.\", \"details\": \"Conflict surfaced rather than resolved silently: morning says up, midday says down.\", \"key_points\": [\"09:00 snapshot: operational\", \"12:30 snapshot: down for maintenance\", \"fresher source wins, conflict reported\"]}"
+expect:
+  output_contains: "disagree"
+  tool_call_count: 2
+  tool_calls:
+    - tool: read_file
+      args: {path: "status_morning.txt"}
+      success: true
+    - tool: read_file
+      args: {path: "status_midday.txt"}
+      success: true
