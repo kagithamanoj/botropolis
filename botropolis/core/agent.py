@@ -326,6 +326,10 @@ class Agent:
                 self._record(ledger, run_id, "tool_called", payload)
             if kind == "tool_blocked":
                 self._record(ledger, run_id, "tool_blocked", payload)
+            if kind == "plan_recorded":
+                self._record(ledger, run_id, "plan_recorded", payload)
+            if kind == "answer_checked":
+                self._record(ledger, run_id, "answer_checked", payload)
             if on_event is not None:
                 on_event(kind, payload)
 

@@ -80,7 +80,10 @@ def test_react_loop_runs_tools_in_order(tmp_path):
     assert [c.tool for c in result.tool_calls] == ["calculator", "calculator"]
     assert all(c.success for c in result.tool_calls)
     assert "5" in result.tool_calls[0].result_preview
-    assert agent.client.calls == 3
+    # Three working calls plus the loop's verification pass over the
+    # final answer. The scripted client repeats the FINAL line for
+    # the check, which restates the draft and counts as a pass.
+    assert agent.client.calls == 4
 
 
 def test_max_steps_stops_runaway_loop(tmp_path):

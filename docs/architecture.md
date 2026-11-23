@@ -182,6 +182,18 @@ carry a token budget and a time budget, in the spec or per run, and
 going over either stops the run. Both exits produce a failed result
 marked escalated with the reason, recorded as `run_escalated`.
 
+**Plan first, verify before done.** The loop also builds in two
+working habits. A run may open with a plan: if the model's first
+reply starts with `PLAN:`, the loop records it in the run state and
+the ledger, then tells the model to begin. Skipping the plan and
+acting directly works exactly as before, and a resumed run keeps its
+recorded plan instead of planning again. At the other end, a final
+answer is not accepted on sight: the loop shows the model the task
+and its draft and asks it to check for errors, unmet requirements,
+and unsupported claims. The model replies with a pass marker or one
+revised answer. An unparseable check reply counts as a pass, so the
+offline stub and small models never break on the check.
+
 **Run state and resume.** Tool loops write their progress after
 every step (task, contract, completed tool calls with results,
 status) to `botropolis/data/runs/<run_id>.json`

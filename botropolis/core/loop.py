@@ -24,6 +24,21 @@ The loop has three exits besides answering:
 
 Escalated exits return usage["escalated"] = True and
 usage["escalation_reason"], and the answer text says what happened.
+
+Two habits are built into the loop itself:
+
+- Plan first: the model's first reply on a run may be a plan, a reply
+  whose first line starts with "PLAN:". The loop records the plan in
+  the run state and the ledger, then tells the model to begin. A
+  model that skips the plan and acts directly works exactly as
+  before.
+- Verify before done: when the model produces a final answer, the
+  loop makes one check pass before accepting it. The model is shown
+  the task and its draft and asked to look for errors, unmet
+  requirements, and unsupported claims. It replies with a pass marker
+  or a revised final answer. At most one revision is accepted, and a
+  check reply that cannot be parsed counts as a pass, so the offline
+  stub and small models never break on the check.
 """
 
 from __future__ import annotations
@@ -43,6 +58,12 @@ if TYPE_CHECKING:
 ACTION_PREFIX = "ACTION:"
 FINAL_PREFIX = "FINAL:"
 OBSERVATION_PREFIX = "OBSERVATION:"
+PLAN_PREFIX = "PLAN:"
+CHECK_PASS_MARKER = "CHECK: PASS"
+PLAN_BEGIN_MESSAGE = (
+    "Plan recorded. Begin: carry out the plan, starting with the "
+    "first step. Reply with ACTION: or FINAL: as usual."
+)
 
 # Default cap on loop iterations. Each step is one model call plus at
 # most one tool execution, so this bounds both cost and runtime.
@@ -73,6 +94,15 @@ def tool_prompt(tool_names: List[str]) -> str:
         "After each ACTION you receive an OBSERVATION: line with the "
         "result. Use observations to decide the next step. When you have "
         "what you need, reply with FINAL: and your answer.",
+        "",
+        "For a task with more than one step, you may begin with a short "
+        "plan: make your first reply a line starting with PLAN: followed "
+        "by the steps you intend to take, and nothing else. You will "
+        "then be told to begin. Skip the plan for one-step tasks.",
+        "",
+        "Before your FINAL: answer is accepted, you will be asked to "
+        "check it once against the task: look for errors, unmet "
+        "requirements, and claims your observations do not support.",
     ]
     return "\n".join(lines)
 
@@ -104,6 +134,64 @@ def parse_model_reply(text: str) -> Tuple[str, Any]:
     # Plain prose counts as the answer. Small models and the offline stub
     # will usually land here, which keeps the loop safe by default.
     return ("final", text)
+
+
+def parse_plan_reply(text: str) -> Optional[str]:
+    """Return the plan text when a reply is a plan, else None.
+
+    A plan is a reply whose first non-empty line starts with "PLAN:".
+    The whole reply is the plan; there is no other content to parse.
+    """
+    stripped = text.strip()
+    if not stripped:
+        return None
+    first_line = stripped.splitlines()[0].strip()
+    if first_line.startswith(PLAN_PREFIX):
+        return stripped
+    return None
+
+
+def check_prompt(task_description: str, draft: str) -> str:
+    """The verification message shown to the model before an answer
+    is accepted: the task, the draft, and what to look for."""
+    return (
+        "Before this run ends, check your draft answer against the "
+        "task. Look for errors, requirements the draft does not meet, "
+        "and claims your observations do not support.\n\n"
+        f"Task: {task_description}\n\n"
+        f"Draft answer:\n{draft}\n\n"
+        f"If the answer is sound, reply with exactly: {CHECK_PASS_MARKER}\n"
+        "If it needs fixing, reply with FINAL: followed by the full "
+        "corrected answer. Only one revision is accepted."
+    )
+
+
+def parse_check_reply(text: str, draft: str) -> Tuple[str, bool]:
+    """Read a check reply. Returns (accepted_answer, revised).
+
+    A pass marker accepts the draft. A FINAL: line, on its own or
+    after a CHECK: line, is the revised answer, unless it restates
+    the draft word for word, which is a pass in effect. Anything
+    else cannot be parsed and counts as a pass: the check must never
+    break a run that already produced an answer.
+    """
+    stripped = text.strip()
+    if not stripped:
+        return draft, False
+    first_line = stripped.splitlines()[0].strip().upper()
+    if first_line.startswith("CHECK:") and "PASS" in first_line:
+        return draft, False
+    if stripped.startswith(FINAL_PREFIX):
+        revised = stripped[len(FINAL_PREFIX):].strip()
+        return (revised, True) if revised and revised != draft else (draft, False)
+    if first_line.startswith("CHECK:"):
+        idx = stripped.find(FINAL_PREFIX)
+        if idx >= 0:
+            revised = stripped[idx + len(FINAL_PREFIX):].strip()
+            if revised and revised != draft:
+                return revised, True
+        return draft, False
+    return draft, False
 
 
 def _preview(result: Any) -> str:
@@ -203,6 +291,11 @@ def run_tool_loop(
     finished tool calls. Prior steps count against max_steps: each one
     already used a model call.
 
+    A plan recorded by an earlier attempt (state key "plan") is seeded
+    back into the conversation on resume, so the run keeps its plan
+    instead of planning again. The final-answer check runs on the
+    accepted answer of this attempt, as usual.
+
     on_event, when given, is called as on_event(kind, payload) with
     ("tool_started", {"tool", "args"}) before each tool runs and
     ("tool_finished", tool_call_dict) after. It never breaks the loop:
@@ -229,8 +322,15 @@ def run_tool_loop(
     # Resume: rebuild the tool calls and the conversation from the
     # steps a previous, interrupted run already completed.
     prior_steps: List[Dict[str, Any]] = []
+    plan_text: Optional[str] = None
     if resume_state:
         prior_steps = list(resume_state.get("steps") or [])
+        saved_plan = resume_state.get("plan")
+        if isinstance(saved_plan, str) and saved_plan.strip():
+            plan_text = saved_plan
+    # A plan counts as the run's first reply wherever it came from: a
+    # resumed run keeps its plan and does not plan a second time.
+    first_reply = plan_text is None and not prior_steps
     tool_calls: List[ToolCall] = [
         ToolCall(
             tool=str(step.get("tool", "")),
@@ -241,6 +341,11 @@ def run_tool_loop(
         )
         for step in prior_steps
     ]
+    if plan_text:
+        # The plan came first in the original run, so it goes back
+        # into the conversation ahead of the completed steps.
+        convo.append({"role": "assistant", "content": plan_text})
+        convo.append({"role": "user", "content": PLAN_BEGIN_MESSAGE})
     for step in prior_steps:
         action = json.dumps(
             {"tool": step.get("tool"), "args": step.get("args") or {}}
@@ -278,6 +383,7 @@ def run_tool_loop(
                         task.contract.to_dict() if task.contract else None
                     ),
                     "steps": [call.to_dict() for call in tool_calls],
+                    "plan": plan_text,
                     "status": status,
                     "answer": answer,
                     "reason": reason,
@@ -329,10 +435,62 @@ def run_tool_loop(
                 f"elapsed, budget is {time_budget_seconds}s"
             )
 
+        plan_reply = parse_plan_reply(text)
+        if plan_reply is not None and plan_text is None and first_reply:
+            # Plan first: record it, then tell the model to begin.
+            # The plan is a step of the run: it lands in the run
+            # state, the ledger (via the event), and the conversation.
+            plan_text = plan_reply
+            first_reply = False
+            emit("plan_recorded", {"plan": plan_text})
+            convo.append({"role": "assistant", "content": text})
+            convo.append({"role": "user", "content": PLAN_BEGIN_MESSAGE})
+            save_state("running")
+            continue
+        if plan_reply is not None:
+            # A plan anywhere else is out of place: the run already
+            # has one, or the time for planning has passed. It is not
+            # an answer; nudge the model back to work.
+            first_reply = False
+            convo.append({"role": "assistant", "content": text})
+            convo.append(
+                {
+                    "role": "user",
+                    "content": (
+                        f"{OBSERVATION_PREFIX} A plan only counts as "
+                        "the first reply of a run, and this run is past "
+                        "that point. Continue with ACTION: or FINAL:."
+                    ),
+                }
+            )
+            continue
+        first_reply = False
+
         kind, payload = parse_model_reply(text)
         if kind == "final":
-            save_state("finished", answer=payload)
-            return payload, tool_calls, usage
+            answer, revised = payload, False
+            try:
+                check_convo = convo + [
+                    {"role": "assistant", "content": text},
+                    {
+                        "role": "user",
+                        "content": check_prompt(task.description, payload),
+                    },
+                ]
+                check_text = agent.client.chat(agent.model, check_convo)
+                reported = getattr(agent.client, "last_usage", None) or {}
+                usage["input"] += int(reported.get("input", 0) or 0)
+                usage["output"] += int(reported.get("output", 0) or 0)
+                answer, revised = parse_check_reply(check_text, payload)
+            except Exception:
+                # The check is a safety net, not a gate: if the check
+                # call itself fails, the draft stands.
+                answer, revised = payload, False
+            usage["answer_checked"] = True
+            usage["check_revised"] = revised
+            emit("answer_checked", {"revised": revised})
+            save_state("finished", answer=answer)
+            return answer, tool_calls, usage
 
         convo.append({"role": "assistant", "content": text})
         if kind == "malformed":

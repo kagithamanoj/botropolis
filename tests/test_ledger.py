@@ -160,7 +160,12 @@ def test_tool_calls_are_recorded(tmp_path):
     result = agent.run("Add", ledger=ledger, run_id=run_id)
     assert result.success
     kinds = [e["kind"] for e in ledger.events(run_id)]
-    assert kinds == ["task_assigned", "tool_called", "output_produced"]
+    assert kinds == [
+        "task_assigned",
+        "tool_called",
+        "answer_checked",
+        "output_produced",
+    ]
     tool_event = ledger.events(run_id)[1]
     assert tool_event["payload"]["tool"] == "calculator"
     assert tool_event["payload"]["success"] is True
