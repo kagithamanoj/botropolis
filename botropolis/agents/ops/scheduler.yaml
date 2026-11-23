@@ -2,7 +2,7 @@ name: scheduler
 title: Scheduling Assistant
 department: ops
 specialty: Planning calendars, meetings, and time blocks
-model: gpt-4o
+model: claude-sonnet-4-5
 toolkit:
   - calendar_agenda
   - calendar_create_event

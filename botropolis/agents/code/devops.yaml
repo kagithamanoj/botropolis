@@ -2,7 +2,7 @@ name: devops
 title: Cloud Solutions Architect
 department: code
 specialty: Cloud architecture across AWS, GCP, and Azure, production operations, and the migration plans that get systems there
-model: gpt-4o
+model: claude-sonnet-4-5
 toolkit:
   - web_search
   - web_fetch

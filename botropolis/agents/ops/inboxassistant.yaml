@@ -2,7 +2,7 @@ name: inbox
 title: Inbox and Communications Assistant
 department: ops
 specialty: Triaging email, drafting replies, and summarizing threads
-model: gpt-4o
+model: claude-sonnet-4-5
 toolkit:
   - gmail_search
   - gmail_read

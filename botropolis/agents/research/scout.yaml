@@ -2,7 +2,7 @@ name: scout
 title: Web Research Specialist
 department: research
 specialty: Finding current, relevant information from the web and summarizing it accurately
-model: gpt-4o
+model: claude-sonnet-4-5
 toolkit:
   - web_search
   - web_fetch
