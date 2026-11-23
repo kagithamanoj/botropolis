@@ -32,6 +32,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from botropolis.core import usage
+from botropolis.core.memory import default_memory_store, set_memory_store
 from botropolis.core.orchestrator import CEO, MAX_TEAM_ROUNDS, history_context
 from botropolis.core.registry import AgentRegistry
 from botropolis.core.schemas import AgentResult, Contract, Task
@@ -46,7 +47,12 @@ app = FastAPI(
 )
 
 registry = AgentRegistry()
-ceo = CEO(registry)
+# The company long-term memory, shared three ways: the CEO recalls
+# from it on every request, and the memory tools save and recall
+# through the same store.
+memory_store = default_memory_store()
+set_memory_store(memory_store)
+ceo = CEO(registry, memory=memory_store)
 
 
 class ChatTurn(BaseModel):

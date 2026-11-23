@@ -104,11 +104,18 @@ in the workspace, records the application in
 human or a browser flow does the actual submission. Recording the same
 title and company twice returns a warning instead of a duplicate.
 
+`botropolis/tools/memory.py` adds `memory_save` and `memory_recall`,
+the tools over the long-term memory store (see Memory below). Every
+agent that already has a toolkit gets both; agents without a toolkit
+stay single-shot. Saving records which agent learned the fact: the
+tool loop fills the name in at dispatch, so the model never supplies
+it and cannot spoof it.
+
 ## Schemas
 
 `botropolis/core/schemas.py` has the dataclasses everything passes
 around: `Task` (work to do), `Context` (what the agent may know beyond
-the task: chat history, teammates' outputs), `Contract` (the agreement
+the task: chat history, recalled memories, teammates' outputs), `Contract` (the agreement
 for a run, with its machine checks), `ToolCall` (one tool
 invocation), `AgentResult` (what one agent produced, including the
 validated `structured` answer), `CompanyReport` (the CEO's final
@@ -131,6 +138,28 @@ Every run appends `run_started`, `task_assigned`, `tool_called`,
 events under one run id. The CEO keeps an in-memory ledger by default;
 pass `Ledger("checkpoints/runs.db")` to persist the trail. Recording
 never breaks a run: a failing ledger is swallowed, not propagated.
+
+## Memory
+
+`botropolis/core/memory.py` is the company's long-term memory: a
+SQLite-backed store of individual facts (a decision, a name, a number,
+a preference) that outlive any single run. It is a different layer
+from the notebook: the notebook is one shared page of prose, memory is
+searchable rows. Each memory records its text, the agent that saved
+it, an importance from 1 to 5, tags, and access stats.
+
+Recall scores by keyword overlap between the query and the fact (text
+plus tags), weighted by importance, newest first on ties, and bumps
+the access count of whatever it returns. The store lives at
+`botropolis/data/memory.db` (gitignored, `BOTROPOLIS_MEMORY_DB` moves
+it); `MemoryStore()` with no path is in-memory for tests.
+
+Two paths use it. Agents with a toolkit get `memory_save` and
+`memory_recall` and are told to save facts as they learn them and to
+recall before answering anything about past work. And when a store is
+attached to the CEO, `handle()` recalls the top five facts matching
+the request (packed under 2000 chars) onto every task's context, so
+even single-shot agents benefit. No store attached, nothing changes.
 
 ## Harness
 

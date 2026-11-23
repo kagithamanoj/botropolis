@@ -172,6 +172,8 @@ def test_ops_agents_carry_the_new_toolkits():
         "notes_append",
         "job_search",
         "job_apply",
+        "memory_save",
+        "memory_recall",
     ]
     scheduler_agent = registry.get("Scheduler")
     assert scheduler_agent.toolkit == [
@@ -180,6 +182,8 @@ def test_ops_agents_carry_the_new_toolkits():
         "current_time",
         "notes_read",
         "notes_append",
+        "memory_save",
+        "memory_recall",
     ]
 
 

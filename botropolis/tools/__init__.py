@@ -33,6 +33,7 @@ from botropolis.tools.gws import (
 )
 from botropolis.tools.jobs import JobApplyTool, JobSearchTool
 from botropolis.tools.mathtool import MathTool
+from botropolis.tools.memory import MemoryRecallTool, MemorySaveTool
 
 __all__ = [
     "TOOLS",
@@ -48,6 +49,8 @@ __all__ = [
     "JobSearchTool",
     "ListDirTool",
     "MathTool",
+    "MemoryRecallTool",
+    "MemorySaveTool",
     "NotesAppendTool",
     "NotesReadTool",
     "ReadFileTool",

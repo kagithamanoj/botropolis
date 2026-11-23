@@ -208,7 +208,9 @@ and pricing checks, plus file tools so his designs land as documents
 with diagrams; Pipelines and
 Trainer get shell, file tools, the calculator, and the math tool; Inbox gets Gmail
 search, read, and draft, plus job search and job apply; Scheduler gets calendar agenda and event
-creation. Every other agent
+creation. Every agent with a toolkit also gets the memory tools
+(`memory_save`, `memory_recall`), so anything learned on a run can be
+kept and found again later. Every other agent
 has no toolkit and behaves exactly as before: one model call, one answer.
 
 When an agent has a toolkit, it runs a think-act-observe loop instead of
@@ -241,11 +243,20 @@ Available tools: `web_search` (DuckDuckGo, no key needed), `web_fetch`
 `current_time`, `gmail_search`, `gmail_read`, `gmail_draft`,
 `calendar_agenda`, `calendar_create_event`, `notes_append`, `notes_read`,
 `job_search` (RemoteOK postings by keyword), `job_apply` (records an
-application package locally; it does not submit anything).
+application package locally; it does not submit anything), `memory_save`
+and `memory_recall` (the company long-term memory, below).
 
 `notes_append` and `notes_read` share one company notebook
 (`botropolis/data/workspace/notes.md`, gitignored): agents can remember
 durable facts across runs, and humans can read the same file.
+
+The memory tools sit on a searchable store
+(`botropolis/data/memory.db`, gitignored): individual facts with an
+importance rating and tags, saved by whichever agent learned them.
+Recall ranks by keyword overlap weighted by importance. On top of
+that, the CEO recalls the facts matching each request and attaches
+them to the tasks, so even agents without tools start from what the
+company already knows.
 
 Google Workspace tools shell out to `hatch_gws_cli` and degrade
 gracefully when Gmail or Calendar is not connected. Two deliberate
@@ -287,10 +298,11 @@ python -m botropolis.eval.runner
 [PASS] calculator_two_step
 [PASS] job_search_and_apply
 [PASS] math_multi_step
+[PASS] memory_save_and_recall
 [PASS] plain_answer_no_tools
 [PASS] unknown_tool_is_refused
 
-5/5 scenarios passed
+6/6 scenarios passed
 ```
 
 Scenarios run with no model credentials and no network: the runner

@@ -38,10 +38,21 @@ def cmd_roster(args: argparse.Namespace) -> int:
     return 0
 
 
+def _wire_memory():
+    """Point the memory tools at the shared company memory store and
+    return it, so the CEO recalls from the same store agents save to."""
+    from botropolis.core.memory import default_memory_store, set_memory_store
+
+    store = default_memory_store()
+    set_memory_store(store)
+    return store
+
+
 def cmd_ask(args: argparse.Namespace) -> int:
     from botropolis.core.ledger import new_run_id
     from botropolis.core.runstate import RunStore
 
+    _wire_memory()
     registry = AgentRegistry()
     try:
         agent = registry.get(args.agent)
@@ -79,6 +90,7 @@ def cmd_ask(args: argparse.Namespace) -> int:
 def cmd_resume(args: argparse.Namespace) -> int:
     from botropolis.core.runstate import RunStore, task_from_state
 
+    _wire_memory()
     store = RunStore()
     try:
         state = store.load(args.run_id)
@@ -112,7 +124,7 @@ def cmd_resume(args: argparse.Namespace) -> int:
 
 
 def cmd_team(args: argparse.Namespace) -> int:
-    ceo = CEO()
+    ceo = CEO(memory=_wire_memory())
     try:
         report = ceo.team(args.task, args.agents, rounds=args.rounds)
     except (KeyError, ValueError) as exc:

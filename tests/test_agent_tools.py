@@ -176,7 +176,13 @@ def test_builtin_agents_with_toolkits_load():
     from botropolis.core.registry import AgentRegistry
 
     registry = AgentRegistry()
-    assert registry.get("scout").toolkit == ["web_search", "web_fetch", "job_search"]
+    assert registry.get("scout").toolkit == [
+        "web_search",
+        "web_fetch",
+        "job_search",
+        "memory_save",
+        "memory_recall",
+    ]
     assert "shell" in registry.get("coder").toolkit
     assert registry.get("Support").toolkit == []
 
@@ -195,6 +201,8 @@ def test_devops_is_the_cloud_architect():
         "read_file",
         "write_file",
         "list_dir",
+        "memory_save",
+        "memory_recall",
     ]
     for cloud in ("AWS", "GCP", "Azure"):
         assert cloud in agent.specialty

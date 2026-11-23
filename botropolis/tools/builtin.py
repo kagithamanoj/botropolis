@@ -461,6 +461,14 @@ from botropolis.tools.jobs import JobApplyTool, JobSearchTool  # noqa: E402
 TOOLS["job_search"] = JobSearchTool()
 TOOLS["job_apply"] = JobApplyTool()
 
+# The memory tools live in botropolis/tools/memory.py, over the store
+# in botropolis/core/memory.py. Registered here so agents can name
+# them in `toolkit` like any other tool.
+from botropolis.tools.memory import MemoryRecallTool, MemorySaveTool  # noqa: E402
+
+TOOLS["memory_save"] = MemorySaveTool()
+TOOLS["memory_recall"] = MemoryRecallTool()
+
 
 def get_tool(name: str) -> Tool:
     """Return the builtin tool with this name."""

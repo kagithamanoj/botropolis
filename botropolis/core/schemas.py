@@ -22,12 +22,16 @@ class Context:
 
     chat_history: recent conversation turns, packed as "role: content"
     lines, so follow-up questions resolve.
+    memories: facts recalled from the company long-term memory for
+    this task, packed as "- [agent] fact" lines, so agents start
+    from what the company already learned instead of rediscovering it.
     teammates_so_far: earlier teammates' outputs in team mode, so
     later turns can build on, critique, or revise.
     extra: escape hatch for future context kinds. Prefer a named field.
     """
 
     chat_history: str = ""
+    memories: str = ""
     teammates_so_far: str = ""
     extra: Dict[str, Any] = field(default_factory=dict)
 
@@ -36,6 +40,8 @@ class Context:
         data: Dict[str, Any] = {}
         if self.chat_history:
             data["chat_history"] = self.chat_history
+        if self.memories:
+            data["memories"] = self.memories
         if self.teammates_so_far:
             data["teammates_so_far"] = self.teammates_so_far
         data.update(self.extra)

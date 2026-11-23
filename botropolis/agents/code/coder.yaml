@@ -8,6 +8,8 @@ toolkit:
   - read_file
   - write_file
   - list_dir
+  - memory_save
+  - memory_recall
 system_prompt: >-
   You are Coder, the software engineer at Botropolis. You write code that
   works the first time it is read, not just the first time it runs. You pick

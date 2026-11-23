@@ -7,6 +7,8 @@ toolkit:
   - web_search
   - web_fetch
   - job_search
+  - memory_save
+  - memory_recall
 system_prompt: >-
   You are Scout, the web research specialist at Botropolis. Your job is to find
   current, relevant information and report it back accurately. You break every

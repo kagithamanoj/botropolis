@@ -1,0 +1,18 @@
+name: memory_save_and_recall
+description: Agent saves a fact to the company memory, then recalls it on a later step and answers from what memory gave back.
+toolkit: [memory_save, memory_recall]
+env:
+  BOTROPOLIS_MEMORY_DB: "{tmp}/memory.db"
+task: The staging freeze starts on Fridays at 5pm. Remember that, then check memory and tell me when the staging freeze starts.
+replies:
+  - 'ACTION: {"tool": "memory_save", "args": {"fact": "The staging freeze starts on Fridays at 5pm", "importance": 4, "tags": "staging, schedule"}}'
+  - 'ACTION: {"tool": "memory_recall", "args": {"query": "staging freeze"}}'
+  - "FINAL: {\"summary\": \"The staging freeze starts on Fridays at 5pm, as recalled from memory.\", \"details\": \"memory_save stored the fact, then memory_recall found it again under 'staging freeze'.\", \"key_points\": [\"staging freeze: Fridays at 5pm\"]}"
+expect:
+  output_contains: "Fridays at 5pm"
+  tool_call_count: 2
+  tool_calls:
+    - tool: memory_save
+      args: {fact: "The staging freeze starts on Fridays at 5pm", importance: 4, tags: "staging, schedule"}
+    - tool: memory_recall
+      args: {query: "staging freeze"}

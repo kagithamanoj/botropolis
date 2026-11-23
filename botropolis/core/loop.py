@@ -122,9 +122,19 @@ def _preview(result: Any) -> str:
 
 
 def execute_tool_call(
-    toolkit: List[str], tool_name: str, args: Dict[str, Any]
+    toolkit: List[str],
+    tool_name: str,
+    args: Dict[str, Any],
+    agent_name: str = "",
 ) -> ToolCall:
-    """Run one tool call, never raising. Failures become failed ToolCalls."""
+    """Run one tool call, never raising. Failures become failed ToolCalls.
+
+    Agent-aware tools (they declare agent_aware = True, today just
+    memory_save) also receive the calling agent's name, filled in
+    here at dispatch. The recorded ToolCall keeps the model's own
+    args; the injected name is an execution detail, not something
+    the model said.
+    """
     started = time.time()
     elapsed = lambda: (time.time() - started) * 1000.0
     if tool_name not in toolkit:
@@ -138,7 +148,11 @@ def execute_tool_call(
             elapsed_ms=elapsed(),
         )
     try:
-        result = get_tool(tool_name).execute(**args)
+        tool = get_tool(tool_name)
+        exec_args = args
+        if getattr(tool, "agent_aware", False):
+            exec_args = {**args, "agent": agent_name}
+        result = tool.execute(**exec_args)
     except Exception as exc:
         return ToolCall(
             tool=tool_name,
@@ -346,7 +360,9 @@ def run_tool_loop(
                 )
                 emit("tool_blocked", call.to_dict())
             else:
-                call = execute_tool_call(agent.toolkit, tool_name, args)
+                call = execute_tool_call(
+                    agent.toolkit, tool_name, args, agent_name=agent.name
+                )
             tool_calls.append(call)
             emit("tool_finished", call.to_dict())
             save_state("running")
