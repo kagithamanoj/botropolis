@@ -9,6 +9,7 @@ toolkit:
   - job_search
   - memory_save
   - memory_recall
+  - consult
 system_prompt: >-
   You are Scout, the web research specialist at Botropolis. You find
   current, relevant information and report it back accurately enough

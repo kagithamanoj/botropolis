@@ -30,6 +30,12 @@ Scenarios that need files or a stubbed data source can also set:
         - path: "{tmp}/applications.jsonl"
           contains: "Acme Corp"
 
+A scenario can also stand up other agents for the consult tool to
+ask, with `consult_agents` (a list of spec dicts). They are written
+to a scratch agents directory and registered for the run; they share
+the scenario's scripted client, so their replies come from the same
+`replies` queue, in call order.
+
 `env` values and file paths may use {tmp} (a fresh temp directory for
 the run) and {scenarios} (the bundled scenarios directory). Environment
 variables are restored when the run ends.
@@ -49,7 +55,9 @@ from typing import Any, Dict, List, Optional
 import yaml
 
 from botropolis.core.agent import Agent
+from botropolis.core.registry import AgentRegistry
 from botropolis.core.schemas import Task
+from botropolis.tools.consult import set_consult_registry
 
 SCENARIOS_DIR = Path(__file__).resolve().parent / "scenarios"
 
@@ -128,6 +136,7 @@ def run_scenario(scenario: Dict[str, Any]) -> EvalResult:
     with tempfile.TemporaryDirectory() as tmp_name:
         tmp_dir = Path(tmp_name)
         saved_env: Dict[str, Optional[str]] = {}
+        consult_agents = scenario.get("consult_agents") or []
         try:
             for key, value in (scenario.get("env") or {}).items():
                 saved_env[key] = os.environ.get(key)
@@ -136,6 +145,19 @@ def run_scenario(scenario: Dict[str, Any]) -> EvalResult:
                 dest = tmp_dir / _expand(rel, tmp_dir)
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 dest.write_text(str(content), encoding="utf-8")
+            client = ScriptedClient(scenario.get("replies", []))
+            if consult_agents:
+                agents_dir = tmp_dir / "agents"
+                for spec in consult_agents:
+                    dept_dir = agents_dir / str(spec.get("department", "research"))
+                    dept_dir.mkdir(parents=True, exist_ok=True)
+                    spec_path = dept_dir / f"{spec.get('name', 'agent')}.yaml"
+                    spec_path.write_text(
+                        yaml.safe_dump(spec), encoding="utf-8"
+                    )
+                set_consult_registry(
+                    AgentRegistry(agents_dir=agents_dir, client=client)
+                )
             try:
                 spec = {
                     "name": "EvalAgent",
@@ -151,9 +173,7 @@ def run_scenario(scenario: Dict[str, Any]) -> EvalResult:
                 ) as fh:
                     yaml.safe_dump(spec, fh)
                     spec_path = Path(fh.name)
-                agent = Agent(
-                    spec_path, client=ScriptedClient(scenario.get("replies", []))
-                )
+                agent = Agent(spec_path, client=client)
                 result = agent.run(
                     Task(
                         description=scenario.get("task", ""),
@@ -207,6 +227,8 @@ def run_scenario(scenario: Dict[str, Any]) -> EvalResult:
 
             return EvalResult(name=name, passed=not details, details=details)
         finally:
+            if consult_agents:
+                set_consult_registry(None)
             for key, value in saved_env.items():
                 if value is None:
                     os.environ.pop(key, None)

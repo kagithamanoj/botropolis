@@ -1,0 +1,22 @@
+name: consult_specialist
+description: Agent consults a specialist mid-task and uses the specialist's answer in its own.
+toolkit: [consult]
+consult_agents:
+  - name: specialist
+    title: Schedule Specialist
+    department: research
+    specialty: Company schedule facts
+    model: stub
+    system_prompt: You are a specialist who answers schedule questions.
+task: When does the staging freeze start? Ask the specialist, then tell me.
+replies:
+  - 'ACTION: {"tool": "consult", "args": {"agent": "specialist", "question": "When does the staging freeze start?"}}'
+  - "FINAL: {\"summary\": \"The staging freeze starts on Fridays at 5pm.\", \"details\": \"\", \"key_points\": []}"
+  - "FINAL: {\"summary\": \"The staging freeze starts on Fridays at 5pm, per the specialist.\", \"details\": \"I consulted the specialist agent, who holds the schedule facts.\", \"key_points\": [\"staging freeze: Fridays at 5pm\"]}"
+expect:
+  output_contains: "Fridays at 5pm"
+  tool_call_count: 1
+  tool_calls:
+    - tool: consult
+      args: {agent: "specialist", question: "When does the staging freeze start?"}
+      success: true

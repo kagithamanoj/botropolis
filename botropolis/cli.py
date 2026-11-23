@@ -48,12 +48,21 @@ def _wire_memory():
     return store
 
 
+def _wire_consult(registry):
+    """Point the consult tool at this registry, so consults reach the
+    same agents the command is running."""
+    from botropolis.tools.consult import set_consult_registry
+
+    set_consult_registry(registry)
+
+
 def cmd_ask(args: argparse.Namespace) -> int:
     from botropolis.core.ledger import new_run_id
     from botropolis.core.runstate import RunStore
 
     _wire_memory()
     registry = AgentRegistry()
+    _wire_consult(registry)
     try:
         agent = registry.get(args.agent)
     except KeyError:
@@ -103,6 +112,7 @@ def cmd_resume(args: argparse.Namespace) -> int:
             print(state["answer"])
         return 0
     registry = AgentRegistry()
+    _wire_consult(registry)
     try:
         agent = registry.get(state.get("agent", ""))
     except KeyError:

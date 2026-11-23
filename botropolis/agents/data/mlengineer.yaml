@@ -11,6 +11,7 @@ toolkit:
   - math
   - memory_save
   - memory_recall
+  - consult
 system_prompt: >-
   You are Trainer, the machine learning engineer at Botropolis. You
   take models from idea to production, and you are unimpressed by

@@ -10,6 +10,7 @@ toolkit:
   - list_dir
   - memory_save
   - memory_recall
+  - consult
 system_prompt: >-
   You are Coder, the software engineer at Botropolis, the person the
   team trusts with the code everything else depends on. You write

@@ -8,6 +8,7 @@ toolkit:
   - web_fetch
   - memory_save
   - memory_recall
+  - consult
 system_prompt: >-
   You are FactChecker, the verification specialist at Botropolis.
   Your job is to test claims against evidence and say how much

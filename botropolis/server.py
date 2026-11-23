@@ -37,6 +37,7 @@ from botropolis.core.orchestrator import CEO, MAX_TEAM_ROUNDS, history_context
 from botropolis.core.registry import AgentRegistry
 from botropolis.core.schemas import AgentResult, Contract, Task
 from botropolis.tools.builtin import notebook_path
+from botropolis.tools.consult import set_consult_registry
 
 WEB_DIR = Path(__file__).parent / "web"
 
@@ -53,6 +54,10 @@ registry = AgentRegistry()
 memory_store = default_memory_store()
 set_memory_store(memory_store)
 ceo = CEO(registry, memory=memory_store)
+
+# The consult tool resolves the specialists it asks from this same
+# registry, so a consult reaches the agents the server is serving.
+set_consult_registry(registry)
 
 
 class ChatTurn(BaseModel):

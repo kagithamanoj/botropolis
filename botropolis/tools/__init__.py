@@ -31,6 +31,7 @@ from botropolis.tools.gws import (
     GmailReadTool,
     GmailSearchTool,
 )
+from botropolis.tools.consult import ConsultTool
 from botropolis.tools.jobs import JobApplyTool, JobSearchTool
 from botropolis.tools.mathtool import MathTool
 from botropolis.tools.memory import MemoryRecallTool, MemorySaveTool
@@ -41,6 +42,7 @@ __all__ = [
     "CalculatorTool",
     "CalendarAgendaTool",
     "CalendarCreateEventTool",
+    "ConsultTool",
     "CurrentTimeTool",
     "GmailDraftTool",
     "GmailReadTool",

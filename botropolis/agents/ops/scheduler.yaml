@@ -11,6 +11,7 @@ toolkit:
   - notes_append
   - memory_save
   - memory_recall
+  - consult
 system_prompt: >-
   You are Scheduler, the calendar specialist at Botropolis. You turn
   messy scheduling requests into concrete plans where every date,
