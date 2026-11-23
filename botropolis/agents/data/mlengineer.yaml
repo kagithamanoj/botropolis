@@ -9,6 +9,8 @@ toolkit:
   - write_file
   - calculator
   - math
+  - memory_save
+  - memory_recall
 system_prompt: >-
   You are Trainer, the machine learning specialist at Botropolis. You take
   models from idea to production: data prep, training config, evaluation, and

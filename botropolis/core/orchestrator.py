@@ -13,6 +13,7 @@ from typing import Dict, List, Optional, Tuple
 from botropolis.core.agent import Agent
 from botropolis.core.evidence import run_checks
 from botropolis.core.ledger import Ledger, new_run_id
+from botropolis.core.memory import MemoryStore
 from botropolis.core.models import ModelClient
 from botropolis.core.registry import AgentRegistry
 from botropolis.core.schemas import (
@@ -126,6 +127,36 @@ def history_context(
     return Context(chat_history="\n".join(lines))
 
 
+# Long-term memory attached to tasks: the top few facts matching the
+# request, packed small. Enough to ground the run in what the company
+# already learned, not so much that it crowds out the task itself.
+MEMORY_RECALL_LIMIT = 5
+MEMORY_CHARS = 2000
+
+
+def memory_context(store: Optional[MemoryStore], request: str) -> str:
+    """Recall the facts matching a request, packed as context lines.
+
+    Empty string when there is no store or nothing matches. Public so
+    tests and callers can see exactly what a task would carry.
+    """
+    if store is None:
+        return ""
+    try:
+        found = store.recall(request, limit=MEMORY_RECALL_LIMIT)
+    except Exception:
+        return ""
+    lines = []
+    total = 0
+    for memory in found:
+        line = f"- [{memory.agent or 'unknown'}] {memory.text}"
+        if total + len(line) + 1 > MEMORY_CHARS:
+            break
+        lines.append(line)
+        total += len(line) + 1
+    return "\n".join(lines)
+
+
 class CEO:
     """Orchestrates the company: plans work, assigns agents, reports back."""
 
@@ -137,6 +168,7 @@ class CEO:
         registry: Optional[AgentRegistry] = None,
         client: Optional[ModelClient] = None,
         ledger: Optional[Ledger] = None,
+        memory: Optional[MemoryStore] = None,
     ) -> None:
         self.registry = registry or AgentRegistry()
         self.client = client or ModelClient()
@@ -144,6 +176,12 @@ class CEO:
         # here. Defaults to in-memory (hermetic, no disk side effects);
         # pass Ledger("checkpoints/runs.db") to persist the trail.
         self.ledger = ledger if ledger is not None else Ledger()
+        # The company long-term memory. When attached, handle() recalls
+        # the facts matching each request and attaches them to every
+        # task as context, so even single-shot agents start from what
+        # the company already learned. None means no recall: behavior
+        # exactly as before.
+        self.memory = memory
 
     def _record(self, run_id: str, kind: str, payload: Optional[Dict] = None) -> None:
         """Append a CEO-level ledger event. Never raises."""
@@ -201,6 +239,10 @@ class CEO:
         itself names no department: the current words always win, and
         history rescues keyword-free follow-ups ("and how long does it
         last?").
+
+        When a memory store is attached to the CEO, the top facts
+        matching the request are recalled and attached alongside the
+        history, on every task.
         """
         scored = self.score_departments(request)
         if not scored and history:
@@ -214,6 +256,9 @@ class CEO:
                 self.registry.departments[0]
             ]
         context = history_context(history)
+        recalled = memory_context(self.memory, request)
+        if recalled:
+            context.memories = recalled
         tasks = []
         for dept in departments:
             focus = f" (focus: {request[:80]})" if len(departments) > 1 else ""

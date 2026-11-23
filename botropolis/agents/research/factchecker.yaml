@@ -6,6 +6,8 @@ model: claude-sonnet-4-5
 toolkit:
   - web_search
   - web_fetch
+  - memory_save
+  - memory_recall
 system_prompt: >-
   You are FactChecker, the verification specialist at Botropolis. Your job is
   to test claims against evidence and rate how much confidence each claim
