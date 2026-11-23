@@ -214,6 +214,7 @@ def execute_tool_call(
     tool_name: str,
     args: Dict[str, Any],
     agent_name: str = "",
+    run_context: Optional[Dict[str, Any]] = None,
 ) -> ToolCall:
     """Run one tool call, never raising. Failures become failed ToolCalls.
 
@@ -222,6 +223,14 @@ def execute_tool_call(
     here at dispatch. The recorded ToolCall keeps the model's own
     args; the injected name is an execution detail, not something
     the model said.
+
+    Two more injections follow the same pattern. Caller-aware tools
+    (caller_aware = True, today just consult) receive the caller's
+    name under the key "caller", separate from "agent" because a
+    tool's own argument may legitimately be named "agent". Run-aware
+    tools (run_aware = True) receive the run's shared context dict
+    under "run_context": depth and budget counters the loop creates
+    once per run, so tools can enforce per-run limits.
     """
     started = time.time()
     elapsed = lambda: (time.time() - started) * 1000.0
@@ -239,7 +248,11 @@ def execute_tool_call(
         tool = get_tool(tool_name)
         exec_args = args
         if getattr(tool, "agent_aware", False):
-            exec_args = {**args, "agent": agent_name}
+            exec_args = {**exec_args, "agent": agent_name}
+        if getattr(tool, "caller_aware", False):
+            exec_args = {**exec_args, "caller": agent_name}
+        if getattr(tool, "run_aware", False):
+            exec_args = {**exec_args, "run_context": run_context}
         result = tool.execute(**exec_args)
     except Exception as exc:
         return ToolCall(
@@ -267,6 +280,7 @@ def run_tool_loop(
     store: Optional["RunStore"] = None,
     run_id: Optional[str] = None,
     resume_state: Optional[Dict[str, Any]] = None,
+    run_context: Optional[Dict[str, Any]] = None,
 ) -> Tuple[str, List[ToolCall], Dict[str, Any]]:
     """Run the think-act-observe loop for one task.
 
@@ -314,6 +328,12 @@ def run_tool_loop(
         token_budget = getattr(agent, "token_budget", None)
     if time_budget_seconds is None:
         time_budget_seconds = getattr(agent, "time_budget_seconds", None)
+
+    # One context dict per run, shared with run-aware tools at
+    # dispatch. A consult sub-run arrives with its own context
+    # (depth already raised), which is how consults cannot chain.
+    if run_context is None:
+        run_context = {"depth": 0, "consults_used": 0}
 
     messages = agent.build_messages(task)
     system = messages[0]["content"] + "\n\n" + tool_prompt(agent.toolkit)
@@ -519,7 +539,11 @@ def run_tool_loop(
                 emit("tool_blocked", call.to_dict())
             else:
                 call = execute_tool_call(
-                    agent.toolkit, tool_name, args, agent_name=agent.name
+                    agent.toolkit,
+                    tool_name,
+                    args,
+                    agent_name=agent.name,
+                    run_context=run_context,
                 )
             tool_calls.append(call)
             emit("tool_finished", call.to_dict())

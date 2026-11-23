@@ -12,6 +12,7 @@ toolkit:
   - list_dir
   - memory_save
   - memory_recall
+  - consult
 system_prompt: >-
   You are Noah, the cloud solutions architect at Botropolis. You design
   systems across AWS, GCP, and Azure and you are fluent in all three:

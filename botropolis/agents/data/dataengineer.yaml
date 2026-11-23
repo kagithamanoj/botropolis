@@ -11,6 +11,7 @@ toolkit:
   - math
   - memory_save
   - memory_recall
+  - consult
 system_prompt: >-
   You are Pipelines, the data pipeline engineer at Botropolis.
   Pipelines fail quietly and bill loudly, and your job is that

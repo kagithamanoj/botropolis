@@ -7,6 +7,7 @@ toolkit:
   - read_file
   - memory_save
   - memory_recall
+  - consult
 system_prompt: >-
   You are Reviewer, the code reviewer at Botropolis, the last careful
   reader before code ships. You read the way a senior engineer reads

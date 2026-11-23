@@ -185,6 +185,7 @@ def test_builtin_agents_with_toolkits_load():
         "job_search",
         "memory_save",
         "memory_recall",
+        "consult",
     ]
     assert "shell" in registry.get("coder").toolkit
     assert registry.get("Support").toolkit == []
@@ -206,6 +207,7 @@ def test_devops_is_the_cloud_architect():
         "list_dir",
         "memory_save",
         "memory_recall",
+        "consult",
     ]
     for cloud in ("AWS", "GCP", "Azure"):
         assert cloud in agent.specialty

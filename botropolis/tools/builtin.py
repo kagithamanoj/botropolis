@@ -469,6 +469,13 @@ from botropolis.tools.memory import MemoryRecallTool, MemorySaveTool  # noqa: E4
 TOOLS["memory_save"] = MemorySaveTool()
 TOOLS["memory_recall"] = MemoryRecallTool()
 
+# The consult tool lives in botropolis/tools/consult.py: it needs
+# the agent registry at call time, resolved there so the import
+# stays one-directional. Registered here like the other tool groups.
+from botropolis.tools.consult import ConsultTool  # noqa: E402
+
+TOOLS["consult"] = ConsultTool()
+
 
 def get_tool(name: str) -> Tool:
     """Return the builtin tool with this name."""

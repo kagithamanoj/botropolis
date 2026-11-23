@@ -199,6 +199,7 @@ class Agent:
         time_budget_seconds: Optional[float] = None,
         store=None,
         resume_state=None,
+        run_context=None,
     ) -> AgentResult:
         """Run one task and return an AgentResult.
 
@@ -219,6 +220,11 @@ class Agent:
         progress after every step; with resume_state, a tool run
         continues an interrupted run from its completed steps instead
         of starting over. Both only affect agents with a toolkit.
+
+        run_context is the per-run dict the tool loop shares with
+        run-aware tools (depth and consult budget). Callers running a
+        sub-task, the consult tool above all, pass one in; a top-level
+        run leaves it None and the loop starts a fresh context.
         """
         if isinstance(task, str):
             task = Task(description=task, department=self.department, agent_name=self.name)
@@ -238,6 +244,7 @@ class Agent:
                     time_budget_seconds=time_budget_seconds,
                     store=store,
                     resume_state=resume_state,
+                    run_context=run_context,
                 )
             messages = self.build_messages(task)
             raw = self.client.chat(self.model, messages)
@@ -307,6 +314,7 @@ class Agent:
         time_budget_seconds: Optional[float] = None,
         store=None,
         resume_state=None,
+        run_context=None,
     ) -> AgentResult:
         """Run the think-act-observe loop and wrap it in an AgentResult.
 
@@ -342,6 +350,7 @@ class Agent:
             store=store,
             run_id=run_id,
             resume_state=resume_state,
+            run_context=run_context,
         )
         provider = self.client.provider_for(self.model)
         if usage.get("escalated"):
