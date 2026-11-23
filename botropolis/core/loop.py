@@ -48,8 +48,10 @@ OBSERVATION_PREFIX = "OBSERVATION:"
 # most one tool execution, so this bounds both cost and runtime.
 DEFAULT_MAX_STEPS = 8
 
-# Tool results can be long; the model only needs the head of them.
-OBSERVATION_CHARS = 2000
+# Tool results can be long; the model gets the head of them. 8000 chars
+# is enough for a full page of code or a long document section; past
+# that the tail is rarely what the next step turns on.
+OBSERVATION_CHARS = 8000
 
 
 def tool_prompt(tool_names: List[str]) -> str:

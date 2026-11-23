@@ -34,7 +34,8 @@ maps to the code.
    agent's prompt includes prior teammates' outputs, and Manoj synthesizes
    the rounds into one answer.
 5. **Remember.** `handle()` and `plan()` take an optional chat history.
-   The tail of it is attached to every task as context, and when the
+   The last 40 turns are attached to every task as context, under a
+   48000 character budget that drops the oldest turns first, and when the
    request itself names no department, routing falls back to scoring the
    request plus recent history. Current words always win.
 

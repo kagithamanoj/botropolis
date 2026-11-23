@@ -94,9 +94,12 @@ MAX_TEAM_ROUNDS = 3
 PRIOR_OUTPUT_CHARS = 800
 
 # Chat history attached to tasks: last N turns, each capped, so follow-up
-# questions carry context without blowing up the prompt.
-HISTORY_TURNS = 10
-HISTORY_TURN_CHARS = 500
+# questions carry context without blowing up the prompt. A total budget
+# caps the packed history; when it runs over, the oldest turns drop
+# first and the newest always survive.
+HISTORY_TURNS = 40
+HISTORY_TURN_CHARS = 2000
+HISTORY_CHARS = 48000
 
 
 def history_context(
@@ -114,6 +117,10 @@ def history_context(
         content = (turn.get("content") or "").strip()[:HISTORY_TURN_CHARS]
         if content:
             lines.append(f"{role}: {content}")
+    total = sum(len(line) + 1 for line in lines)
+    while lines and total > HISTORY_CHARS:
+        total -= len(lines[0]) + 1
+        lines.pop(0)
     if not lines:
         return Context()
     return Context(chat_history="\n".join(lines))

@@ -90,6 +90,31 @@ def test_history_context_empty_history_gives_empty_context():
     assert not history_context([{"role": "user", "content": "   "}])
 
 
+def test_history_context_keeps_the_last_forty_turns():
+    history = [
+        {"role": "user", "content": f"turn {i}"} for i in range(50)
+    ]
+    ctx = history_context(history)
+    lines = ctx.chat_history.splitlines()
+    assert len(lines) == 40
+    assert lines[0] == "user: turn 10"
+    assert lines[-1] == "user: turn 49"
+
+
+def test_history_context_drops_oldest_turns_over_the_char_budget():
+    # 30 turns of 2000 chars each pack to about 60k chars, over the
+    # 48000 budget: the oldest turns drop, the newest survive.
+    history = [
+        {"role": "user", "content": f"turn {i} " + "x" * 2000}
+        for i in range(30)
+    ]
+    ctx = history_context(history)
+    assert len(ctx.chat_history) <= 48000
+    assert "turn 29" in ctx.chat_history
+    assert "turn 0 " not in ctx.chat_history
+    assert "turn 5 " not in ctx.chat_history
+
+
 def test_team_context_packs_teammate_outputs():
     ceo = CEO(AgentRegistry())
     prior = [(1, "coder", "draft code here"), (1, "reviewer", "looks good")]

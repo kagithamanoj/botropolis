@@ -94,7 +94,7 @@
   /* Recent turns sent with each request so follow-up questions have
      context. Capped; Clear wipes it. */
   var chatHistory = [];
-  var CHAT_HISTORY_TURNS = 10;
+  var CHAT_HISTORY_TURNS = 40;
 
   function pushChatTurn(role, content) {
     chatHistory.push({ role: role, content: content });
@@ -361,7 +361,7 @@
   /* Per-agent conversation memory, mirroring the chat tab. Reset when
      the picked agent changes. */
   var warroomHistory = [];
-  var WARROOM_HISTORY_TURNS = 10;
+  var WARROOM_HISTORY_TURNS = 40;
 
   function pushWarroomTurn(role, content) {
     warroomHistory.push({ role: role, content: content });

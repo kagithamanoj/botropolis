@@ -136,11 +136,11 @@ class WebFetchTool(Tool):
         "max_chars": {
             "type": "integer",
             "description": "Truncate text after N chars",
-            "default": 8000,
+            "default": 20000,
         },
     }
 
-    def execute(self, url: str, max_chars: int = 8000) -> Dict[str, Any]:
+    def execute(self, url: str, max_chars: int = 20000) -> Dict[str, Any]:
         try:
             resp = requests.get(
                 url,
@@ -277,10 +277,10 @@ class ReadFileTool(Tool):
             "description": "Path inside the workspace, e.g. 'notes/todo.txt'",
             "required": True,
         },
-        "max_chars": {"type": "integer", "description": "Truncate after N chars", "default": 20000},
+        "max_chars": {"type": "integer", "description": "Truncate after N chars", "default": 60000},
     }
 
-    def execute(self, path: str, max_chars: int = 20000) -> str:
+    def execute(self, path: str, max_chars: int = 60000) -> str:
         target = resolve_workspace_path(path)
         if not target.is_file():
             raise FileNotFoundError(f"No such file in workspace: {path}")

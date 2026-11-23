@@ -63,12 +63,12 @@ def test_plan_without_history_has_no_chat_context(ceo):
 
 
 def test_plan_caps_history_turns(ceo):
-    history = [{"role": "user", "content": f"turn {i}"} for i in range(30)]
+    history = [{"role": "user", "content": f"turn {i}"} for i in range(50)]
     tasks = ceo.plan("follow up", history=history)
     ctx = tasks[0].context.chat_history
     assert "turn 0" not in ctx
-    assert "turn 29" in ctx
-    assert len(ctx.splitlines()) == 10
+    assert "turn 49" in ctx
+    assert len(ctx.splitlines()) == 40
 
 
 def test_handle_accepts_history(ceo):
