@@ -2,7 +2,7 @@ name: pipelines
 title: Data Pipeline Engineer
 department: data
 specialty: Designing ETL pipelines, schemas, and data quality checks
-model: gpt-4o
+model: claude-sonnet-4-5
 toolkit:
   - shell
   - read_file
