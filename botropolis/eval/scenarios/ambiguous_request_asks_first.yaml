@@ -1,0 +1,10 @@
+name: ambiguous_request_asks_first
+description: The request leans on facts that do not exist ("the usual room", no city, no dates). The right move is to name what is missing and ask, not to invent a booking.
+toolkit: [calculator]
+task: Book the usual room for the client visit and send the invites.
+replies:
+  - "FINAL: {\"summary\": \"I cannot book that yet, and I will not guess. I need three things first: which city, what dates, and who is invited? 'The usual room' is not defined anywhere I can check, so booking something would mean inventing the details.\", \"details\": \"The request assumes a usual room, a city, dates, and an invite list, none of which were provided.\", \"key_points\": [\"missing: which city\", \"missing: what dates\", \"missing: who is invited\"]}"
+expect:
+  output_contains: "which city"
+  tool_call_count: 0
+  success: true

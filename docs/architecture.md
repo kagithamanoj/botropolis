@@ -52,6 +52,22 @@ and gives the agent a `run(task)` method.
 `agents/*/*.yaml` at startup and answers `get(name)`,
 `by_department(dept)`, and `list_all()`.
 
+## How the agents work
+
+Four things make an agent good here, and none of them is the raw
+model. The know-how lives in the specs: every system prompt is
+written like a practitioner in that field, with a working method,
+the failure modes to watch for, a quality bar for the output, and a
+clear line on when to hand a problem to someone else. The working
+habits live in the tool loop: a run may open with a recorded plan,
+and a final answer is checked once against the task before it is
+accepted (see Harness). When a task turns on another field, an agent
+does not guess: the `consult` tool runs the question past the
+specialist whose field it is. And what the company learns is kept:
+the memory tools save facts with the agent that learned them, and
+the CEO attaches the relevant ones to new tasks, so the next run
+starts from what the company already knows instead of from zero.
+
 ## Models
 
 `botropolis/core/models.py` holds `ModelClient`. It resolves which
@@ -110,6 +126,16 @@ agent that already has a toolkit gets both; agents without a toolkit
 stay single-shot. Saving records which agent learned the fact: the
 tool loop fills the name in at dispatch, so the model never supplies
 it and cannot spoof it.
+
+`botropolis/tools/consult.py` adds `consult`: an agent names a
+specialist and asks one question, and that agent runs the question
+as its own task and answers back. The guards are enforced in the
+tool, not the prompt: no consulting yourself, a consulted run cannot
+consult further (depth one), and each run gets three consults,
+counted in a run context the loop creates per run and hands to the
+tool at dispatch. An unknown name returns an error the model can
+recover from. The registry is resolved at call time, so the server,
+the CLI, and tests each pin their own.
 
 ## Schemas
 
