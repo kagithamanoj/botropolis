@@ -6,6 +6,7 @@ Subcommands:
     team "task" A [B]  Run agents as a team in collaboration rounds.
     resume RUN_ID       Continue an interrupted tool run from its saved state.
     map RUN_ID          Print a run's task map: goal, plan, progress, blockers.
+    trace RUN_ID        Print a run's trace: every step in order.
     evals               Run the scenario evals.
     serve               Start the web server.
     notebook            Print the shared company notebook.
@@ -147,6 +148,25 @@ def cmd_map(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_trace(args: argparse.Namespace) -> int:
+    import json
+
+    from botropolis.core.runstate import RunStore
+    from botropolis.core.trace import build_trace, render_text
+
+    store = RunStore()
+    try:
+        trace = build_trace(store, args.run_id)
+    except FileNotFoundError:
+        print(f"No saved run with id {args.run_id}.")
+        return 1
+    if args.json:
+        print(json.dumps(trace, indent=2, default=str))
+    else:
+        print(render_text(trace))
+    return 0
+
+
 def cmd_team(args: argparse.Namespace) -> int:
     ceo = CEO(memory=_wire_memory())
     try:
@@ -212,6 +232,11 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("map", help="Print a run's task map.")
     p.add_argument("run_id", help="Run id printed by a previous ask.")
     p.set_defaults(func=cmd_map)
+
+    p = sub.add_parser("trace", help="Print a run's trace.")
+    p.add_argument("run_id", help="Run id printed by a previous ask.")
+    p.add_argument("--json", action="store_true", help="Dump the trace as JSON.")
+    p.set_defaults(func=cmd_trace)
 
     p = sub.add_parser("evals", help="Run the scenario evals.")
     p.add_argument("directory", nargs="?", default=None, help="Scenarios directory.")
