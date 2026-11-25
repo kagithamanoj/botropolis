@@ -192,7 +192,7 @@ even single-shot agents benefit. No store attached, nothing changes.
 The model is one part of a run. The harness around it is the rest:
 the contract the work is held to, the walls it cannot cross, the
 state it leaves behind, and the checks that decide whether "done"
-means done. Eight pieces:
+means done. Nine pieces:
 
 **Contracts.** A `Contract` (goal, scope, exclusions, done_when, and
 optional machine checks) can be attached to a run through
@@ -269,6 +269,17 @@ dispatch, a flagged call on an unapproved run never executes: the
 model gets a blocked observation, the call is recorded on the
 result, and the ledger gets a `tool_blocked` event. Nothing is
 flagged by default.
+
+**Traces.** The ledger and run state record every step, and
+`botropolis trace <run_id>` reads a run back as one story
+(`botropolis/core/trace.py`): the task, the plan, the tool calls
+with one-line outcomes, the ledger events for the run, and the
+final status and answer, as plain readable text, or as JSON with
+`--json`. The run state is the source of truth, so a missing run
+is an error; ledger events ride along when a persisted ledger
+exists (`BOTROPOLIS_LEDGER_DB`, or `botropolis/data/ledger.db`
+when present) and are simply absent otherwise. Reading a trace
+never creates files.
 
 ## Server
 
