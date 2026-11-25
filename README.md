@@ -135,6 +135,7 @@ command:
 botropolis roster --department ops
 botropolis ask Coder "summarize this quarter's roadmap"
 botropolis resume <run_id>
+botropolis map <run_id>
 botropolis team "plan the launch" Coder Reviewer --rounds 2
 botropolis evals
 botropolis notebook

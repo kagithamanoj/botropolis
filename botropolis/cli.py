@@ -5,6 +5,7 @@ Subcommands:
     ask AGENT "task"    Ask one agent directly and print the answer.
     team "task" A [B]  Run agents as a team in collaboration rounds.
     resume RUN_ID       Continue an interrupted tool run from its saved state.
+    map RUN_ID          Print a run's task map: goal, plan, progress, blockers.
     evals               Run the scenario evals.
     serve               Start the web server.
     notebook            Print the shared company notebook.
@@ -133,6 +134,19 @@ def cmd_resume(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_map(args: argparse.Namespace) -> int:
+    from botropolis.core.runstate import RunStore
+    from botropolis.core.taskmap import read_map
+
+    store = RunStore()
+    try:
+        print(read_map(store, args.run_id))
+    except FileNotFoundError:
+        print(f"No saved run with id {args.run_id}.")
+        return 1
+    return 0
+
+
 def cmd_team(args: argparse.Namespace) -> int:
     ceo = CEO(memory=_wire_memory())
     try:
@@ -194,6 +208,10 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("resume", help="Continue an interrupted tool run.")
     p.add_argument("run_id", help="Run id printed by a previous ask.")
     p.set_defaults(func=cmd_resume)
+
+    p = sub.add_parser("map", help="Print a run's task map.")
+    p.add_argument("run_id", help="Run id printed by a previous ask.")
+    p.set_defaults(func=cmd_map)
 
     p = sub.add_parser("evals", help="Run the scenario evals.")
     p.add_argument("directory", nargs="?", default=None, help="Scenarios directory.")

@@ -39,6 +39,11 @@ Two habits are built into the loop itself:
   or a revised final answer. At most one revision is accepted, and a
   check reply that cannot be parsed counts as a pass, so the offline
   stub and small models never break on the check.
+- Task map: after every step the loop writes the run's progress in
+  words next to the state file, a markdown map with the goal, the
+  plan with steps marked done or pending, the tool calls so far, and
+  any blockers. A resumed run reads its map back into the
+  conversation, so the continuing agent sees where the work stands.
 """
 
 from __future__ import annotations
@@ -48,6 +53,7 @@ import time
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 from botropolis.core.schemas import ToolCall
+from botropolis.core.taskmap import read_map, write_map
 from botropolis.tools import get_tool
 
 if TYPE_CHECKING:
@@ -379,12 +385,44 @@ def run_tool_loop(
             {"role": "user", "content": f"{OBSERVATION_PREFIX} {observation}"}
         )
 
+    if resume_state and store is not None and run_id is not None:
+        # The map is the run's progress in words. The continuing
+        # agent reads it before it starts again, so it knows where
+        # the work stands without re-deriving it from raw steps.
+        try:
+            map_text = read_map(store, run_id)
+        except Exception:
+            map_text = ""
+        if map_text:
+            convo.append(
+                {"role": "user", "content": f"Task map so far:\n{map_text}"}
+            )
+
     usage: Dict[str, Any] = {"input": 0, "output": 0}
     last_text = ""
     max_steps = max(1, agent.max_steps)
     loop_started = time.time()
     last_failure: Optional[Tuple[str, str, str]] = None
     failure_streak = 0
+
+    def state_dict(
+        status: str,
+        answer: Optional[str] = None,
+        reason: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        return {
+            "run_id": run_id,
+            "agent": agent.name,
+            "task": task.to_dict(),
+            "contract": (
+                task.contract.to_dict() if task.contract else None
+            ),
+            "steps": [call.to_dict() for call in tool_calls],
+            "plan": plan_text,
+            "status": status,
+            "answer": answer,
+            "reason": reason,
+        }
 
     def save_state(
         status: str,
@@ -393,24 +431,14 @@ def run_tool_loop(
     ) -> None:
         if store is None or run_id is None:
             return
+        state = state_dict(status, answer, reason)
         try:
-            store.save(
-                {
-                    "run_id": run_id,
-                    "agent": agent.name,
-                    "task": task.to_dict(),
-                    "contract": (
-                        task.contract.to_dict() if task.contract else None
-                    ),
-                    "steps": [call.to_dict() for call in tool_calls],
-                    "plan": plan_text,
-                    "status": status,
-                    "answer": answer,
-                    "reason": reason,
-                }
-            )
+            store.save(state)
         except Exception:
             pass
+        # The task map is the same progress in words, written next
+        # to the state file after every step.
+        write_map(store, state)
 
     def escalate(reason: str) -> Tuple[str, List[ToolCall], Dict[str, Any]]:
         usage["escalated"] = True
