@@ -192,7 +192,7 @@ even single-shot agents benefit. No store attached, nothing changes.
 The model is one part of a run. The harness around it is the rest:
 the contract the work is held to, the walls it cannot cross, the
 state it leaves behind, and the checks that decide whether "done"
-means done. Five pieces:
+means done. Seven pieces:
 
 **Contracts.** A `Contract` (goal, scope, exclusions, done_when, and
 optional machine checks) can be attached to a run through
@@ -228,6 +228,18 @@ status) to `botropolis/data/runs/<run_id>.json`
 continues from the first unfinished one; finished tool calls are
 shown to the model as observations, not re-executed. A run that
 already finished says so and exits.
+
+**Task map.** The same progress, in words. After every step the
+loop also writes `botropolis/data/runs/<run_id>.map.md`
+(`botropolis/core/taskmap.py`, gitignored): the goal and the
+contract's done-when items, the recorded plan with each step marked
+done or pending, the tool calls so far with one-line outcomes, and
+any blockers. Plan steps are marked done in order as tool calls
+succeed, which is a progress sketch, not a proof. A resumed run
+reads its map back into the conversation, so the continuing agent
+sees where the work stands in words, not just raw steps.
+`botropolis map <run_id>` prints it; when the map file is missing
+it is rendered from the state file instead.
 
 **Done evidence.** A contract's machine checks are shell commands
 with an expected exit code (`botropolis/core/evidence.py`). Before
