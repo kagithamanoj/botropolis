@@ -11,4 +11,5 @@ pub mod output_schemas;
 pub mod paths;
 pub mod registry;
 pub mod schemas;
+pub mod tool_loop;
 pub mod tools;

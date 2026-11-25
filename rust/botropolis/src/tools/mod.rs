@@ -10,6 +10,9 @@
 //! tool whose implementation has not landed yet is a plain error, not
 //! a silent success.
 
+pub mod builtin;
+pub mod expr;
+
 use serde_json::{json, Value};
 
 /// One tool's public description: name, what it does, and its parameters.
@@ -241,4 +244,50 @@ pub fn get_tool_def(name: &str) -> Option<ToolDef> {
 /// True when the name is a known tool.
 pub fn known_tool(name: &str) -> bool {
     get_tool_def(name).is_some()
+}
+
+use std::cell::RefCell;
+use std::rc::Rc;
+use std::sync::Arc;
+
+use crate::registry::AgentRegistry;
+use crate::tool_loop::RunContext;
+
+/// What a tool call needs beyond its own arguments: the calling
+/// agent's name, the run's shared context (consult depth and budget),
+/// and the registry consult resolves specialists from.
+pub struct ToolCtx {
+    pub agent_name: String,
+    pub run_context: Rc<RefCell<RunContext>>,
+    pub registry: Option<Arc<AgentRegistry>>,
+}
+
+impl ToolCtx {
+    pub fn new(agent_name: impl Into<String>) -> Self {
+        ToolCtx {
+            agent_name: agent_name.into(),
+            run_context: Rc::new(RefCell::new(RunContext::default())),
+            registry: None,
+        }
+    }
+}
+
+/// Run one tool by name. Returns the tool's result as JSON, or an
+/// error string the loop records as a failed call. Tools whose
+/// implementation has not landed yet fail plainly instead of
+/// pretending to work.
+pub fn dispatch(name: &str, args: &Value, ctx: &ToolCtx) -> Result<Value, String> {
+    let _ = ctx;
+    match name {
+        "calculator" => builtin::calculator(args),
+        _ => {
+            if known_tool(name) {
+                Err(format!(
+                    "tool {name} is not implemented yet in the Rust port"
+                ))
+            } else {
+                Err(format!("Unknown tool: {name}"))
+            }
+        }
+    }
 }
