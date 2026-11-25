@@ -11,7 +11,12 @@
 //! a silent success.
 
 pub mod builtin;
+pub mod consult;
 pub mod expr;
+pub mod gws;
+pub mod jobs;
+pub mod math;
+pub mod memory_tools;
 
 use serde_json::{json, Value};
 
@@ -159,10 +164,11 @@ pub fn tool_catalog() -> Vec<ToolDef> {
             name: "calendar_create_event",
             description: "Create a private calendar event (no attendees).",
             parameters: json!({
-                "title": param("string", "Event title", true),
-                "start": param("string", "Start time, ISO 8601", true),
-                "end": param("string", "End time, ISO 8601", true),
+                "summary": param("string", "Event title", true),
+                "start": param("string", "Start datetime, RFC3339", true),
+                "end": param("string", "End datetime, RFC3339", true),
                 "description": param("string", "Event description", false),
+                "location": param("string", "Event location", false),
             }),
             agent_aware: false, caller_aware: false, run_aware: false,
         },
@@ -277,9 +283,28 @@ impl ToolCtx {
 /// implementation has not landed yet fail plainly instead of
 /// pretending to work.
 pub fn dispatch(name: &str, args: &Value, ctx: &ToolCtx) -> Result<Value, String> {
-    let _ = ctx;
     match name {
         "calculator" => builtin::calculator(args),
+        "web_search" => builtin::web_search(args),
+        "web_fetch" => builtin::web_fetch(args),
+        "shell" => builtin::shell(args),
+        "read_file" => builtin::read_file(args),
+        "write_file" => builtin::write_file(args),
+        "list_dir" => builtin::list_dir(args),
+        "current_time" => builtin::current_time(args),
+        "notes_append" => builtin::notes_append(args),
+        "notes_read" => builtin::notes_read(args),
+        "gmail_search" => gws::gmail_search(args),
+        "gmail_read" => gws::gmail_read(args),
+        "gmail_draft" => gws::gmail_draft(args),
+        "calendar_agenda" => gws::calendar_agenda(args),
+        "calendar_create_event" => gws::calendar_create_event(args),
+        "math" => math::math(args),
+        "job_search" => jobs::job_search(args),
+        "job_apply" => jobs::job_apply(args),
+        "memory_save" => memory_tools::memory_save(args),
+        "memory_recall" => memory_tools::memory_recall(args),
+        "consult" => consult::consult(args, ctx),
         _ => {
             if known_tool(name) {
                 Err(format!(
