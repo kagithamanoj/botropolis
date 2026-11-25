@@ -166,7 +166,11 @@ pub struct RealClient {
     pub default_model: String,
     registry: ModelRegistryFile,
     last_usage: Mutex<Usage>,
-    http: reqwest::blocking::Client,
+    /// Built lazily on the first live HTTP call. A blocking client
+    /// owns a runtime, so building one eagerly would make every
+    /// stub-only run (and the server, which drops agents inside the
+    /// async runtime) carry a runtime it never uses.
+    http: Mutex<Option<reqwest::blocking::Client>>,
 }
 
 impl RealClient {
@@ -175,11 +179,22 @@ impl RealClient {
             default_model: default_model.into(),
             registry: load_model_registry(None),
             last_usage: Mutex::new(Usage::default()),
-            http: reqwest::blocking::Client::builder()
-                .timeout(std::time::Duration::from_secs(120))
-                .build()
-                .unwrap_or_else(|_| reqwest::blocking::Client::new()),
+            http: Mutex::new(None),
         }
+    }
+
+    /// The shared HTTP client, built on first use.
+    fn http_client(&self) -> reqwest::blocking::Client {
+        let mut slot = self.http.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(client) = slot.as_ref() {
+            return client.clone();
+        }
+        let client = reqwest::blocking::Client::builder()
+            .timeout(std::time::Duration::from_secs(120))
+            .build()
+            .unwrap_or_else(|_| reqwest::blocking::Client::new());
+        *slot = Some(client.clone());
+        client
     }
 
     /// Pick the best provider for a model id, preferring stub offline.
@@ -275,12 +290,14 @@ impl RealClient {
     ) -> Result<(String, Usage), ModelError> {
         let key = env::var("OPENAI_API_KEY").unwrap_or_default();
         let resp = self
-            .http
+            .http_client()
             .post("https://api.openai.com/v1/chat/completions")
             .bearer_auth(key)
             .json(&serde_json::json!({"model": model_id, "messages": messages}))
             .send()?;
-        let data: serde_json::Value = resp.json().map_err(|e| ModelError::BadResponse(e.to_string()))?;
+        let data: serde_json::Value = resp
+            .json()
+            .map_err(|e| ModelError::BadResponse(e.to_string()))?;
         let usage = norm_usage(
             data.get("usage").unwrap_or(&serde_json::Value::Null),
             &["prompt_tokens"],
@@ -318,14 +335,16 @@ impl RealClient {
             payload["system"] = serde_json::Value::String(system.join("\n"));
         }
         let resp = self
-            .http
+            .http_client()
             .post("https://api.anthropic.com/v1/messages")
             .header("x-api-key", key)
             .header("anthropic-version", "2023-06-01")
             .header("content-type", "application/json")
             .json(&payload)
             .send()?;
-        let data: serde_json::Value = resp.json().map_err(|e| ModelError::BadResponse(e.to_string()))?;
+        let data: serde_json::Value = resp
+            .json()
+            .map_err(|e| ModelError::BadResponse(e.to_string()))?;
         let usage = norm_usage(
             data.get("usage").unwrap_or(&serde_json::Value::Null),
             &["input_tokens"],
@@ -372,14 +391,17 @@ impl RealClient {
             "https://generativelanguage.googleapis.com/v1beta/models/{model_id}:generateContent"
         );
         let resp = self
-            .http
+            .http_client()
             .post(url)
             .query(&[("key", key)])
             .json(&payload)
             .send()?;
-        let data: serde_json::Value = resp.json().map_err(|e| ModelError::BadResponse(e.to_string()))?;
+        let data: serde_json::Value = resp
+            .json()
+            .map_err(|e| ModelError::BadResponse(e.to_string()))?;
         let usage = norm_usage(
-            data.get("usageMetadata").unwrap_or(&serde_json::Value::Null),
+            data.get("usageMetadata")
+                .unwrap_or(&serde_json::Value::Null),
             &["promptTokenCount"],
             &["candidatesTokenCount"],
         );
@@ -410,11 +432,13 @@ impl RealClient {
             .trim_end_matches('/')
             .to_string();
         let resp = self
-            .http
+            .http_client()
             .post(format!("{host}/api/chat"))
             .json(&serde_json::json!({"model": model_id, "messages": messages, "stream": false}))
             .send()?;
-        let data: serde_json::Value = resp.json().map_err(|e| ModelError::BadResponse(e.to_string()))?;
+        let data: serde_json::Value = resp
+            .json()
+            .map_err(|e| ModelError::BadResponse(e.to_string()))?;
         let usage = norm_usage(&data, &["prompt_eval_count"], &["eval_count"]);
         let text = data
             .get("message")
@@ -475,7 +499,11 @@ pub fn stub_chat(model_id: &str, messages: &[ChatMessage]) -> String {
         format!("Reasoning: {}", openers[variant]),
         format!(
             "1. Identify the core ask and the key terms involved ({}).",
-            if focus.is_empty() { "general request".to_string() } else { focus }
+            if focus.is_empty() {
+                "general request".to_string()
+            } else {
+                focus
+            }
         ),
         "2. Apply domain expertise to separate facts, assumptions, and unknowns.".to_string(),
         "3. Draft a response that is specific, checkable, and scoped to the request.".to_string(),
@@ -486,8 +514,7 @@ pub fn stub_chat(model_id: &str, messages: &[ChatMessage]) -> String {
         "- Run the relevant builtin tools to ground the answer in data.".to_string(),
         "- Escalate to a specialist agent if the task crosses departments.".to_string(),
         String::new(),
-        "Set a model API key (OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY) "
-            .to_string()
+        "Set a model API key (OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY) ".to_string()
             + "or run Ollama locally to get a real model response instead of this stub.",
     ];
     lines.join("\n")
