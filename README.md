@@ -143,6 +143,39 @@ botropolis notebook
 botropolis serve --port 8000
 ```
 
+## Rust implementation
+
+The same framework, ported to Rust, lives in `rust/`. It loads the same
+agent YAML specs from `botropolis/agents/`, serves the same web UI from
+`botropolis/web/`, and reads and writes the same run state, task maps,
+memory, and ledger files, so a run started by either side can be read by
+the other. The Python side stays the reference implementation; the Rust
+side is additive until a later phase proves parity.
+
+Requires a stable Rust toolchain ([rustup](https://rustup.rs)):
+
+```bash
+cd rust
+cargo build
+cargo run -- roster
+cargo run -- serve --port 8000
+cargo run -- evals
+```
+
+The binary has the same command surface as the Python CLI (`roster`,
+`ask`, `team`, `resume`, `map`, `trace`, `evals`, `serve`, `notebook`)
+and the server has the same endpoints (`POST /ask`, `POST /team`,
+`GET /agents`, `POST /agents/{name}/ask`, the SSE stream,
+`GET /analytics`, `GET /notebook`, `GET /departments`, `GET /health`,
+plus the static UI). Run `cargo test` for the Rust suite and
+`cargo clippy --all-targets` for the linter; CI runs both, with clippy
+warnings as errors. Toolchain notes live in `docs/rust-toolchain.md`.
+
+Two honest limits: the Rust `math` tool is an expression evaluator with
+exact polynomial algebra, not a symbolic algebra system like the Python
+side's sympy tool, and it says so in its docs. Training stays Python:
+the `training/` pipeline has no Rust port.
+
 ## Web UI
 
 The same server also serves a web UI. No build step, no frameworks,
@@ -375,6 +408,7 @@ botropolis/
   server.py    FastAPI: POST /ask, POST /agents/{name}/ask, POST /team, GET /agents, GET /departments, GET /analytics
 models/        registry.yaml and model cards
 training/      configs, datasets, train.py, evaluate.py
+rust/          Rust port: same specs, same UI, same run formats (see README)
 examples/      demo.py, add_agent.py
 docs/          architecture, adding agents, adding models, training guide
 tests/

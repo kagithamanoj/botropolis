@@ -1,7 +1,9 @@
 //! Registry loading and model client tests for the Rust port.
 
 use botropolis::agent::Agent;
-use botropolis::models::{find_model_entry, infer_provider, load_model_registry, ModelClient, RealClient, ScriptedClient};
+use botropolis::models::{
+    find_model_entry, infer_provider, load_model_registry, ModelClient, RealClient, ScriptedClient,
+};
 use botropolis::registry::AgentRegistry;
 use botropolis::schemas::Task;
 use std::sync::Arc;
@@ -32,8 +34,16 @@ fn departments_match() {
     let registry = AgentRegistry::load().unwrap();
     let departments = registry.departments();
     let expected: Vec<String> = vec![
-        "code", "data", "finance", "health", "legal", "marketing", "ops", "research",
-        "security", "support",
+        "code",
+        "data",
+        "finance",
+        "health",
+        "legal",
+        "marketing",
+        "ops",
+        "research",
+        "security",
+        "support",
     ]
     .into_iter()
     .map(|s| s.to_string())
@@ -139,13 +149,15 @@ fn single_shot_agent_run_with_stub() {
         result.metadata.get("provider"),
         Some(&serde_json::Value::String("stub".to_string()))
     );
-    assert!(result.structured.get("summary").is_some());
+    assert!(result.structured.contains_key("summary"));
 }
 
 #[test]
 fn scripted_client_plays_replies_in_order() {
-    let client: Arc<dyn ModelClient> =
-        Arc::new(ScriptedClient::new(vec!["first".to_string(), "second".to_string()]));
+    let client: Arc<dyn ModelClient> = Arc::new(ScriptedClient::new(vec![
+        "first".to_string(),
+        "second".to_string(),
+    ]));
     let messages = vec![botropolis::models::ChatMessage::new("user", "hi")];
     assert_eq!(client.chat("stub", &messages).unwrap(), "first");
     assert_eq!(client.chat("stub", &messages).unwrap(), "second");
