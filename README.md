@@ -394,7 +394,6 @@ Details in `docs/adding-agents.md`.
 - Department-level fine-tunes registered with eval scores (Scout-tiny was
   the first proof of concept: a 5.49M-parameter transformer trained from
   scratch; next is LoRA on a small open model)
-- Nightly eval runs in CI
 - A hosted demo you can try without cloning
 - More departments: the org chart grows by pull request
 
@@ -402,6 +401,8 @@ Done:
 - A simple web UI on top of the API server
 - Plain-text tool protocol with live streaming
 - Scenario evals that run with no keys and no network
+- Nightly eval runs in CI (`.github/workflows/nightly-eval.yml`, 5 AM UTC,
+  runnable by hand)
 
 ## Contributing
 
