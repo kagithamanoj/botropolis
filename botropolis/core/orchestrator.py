@@ -12,12 +12,14 @@ from typing import Dict, List, Optional, Tuple
 
 from botropolis.core.agent import Agent
 from botropolis.core.evidence import run_checks
+from botropolis.core.judge import run_judge
 from botropolis.core.ledger import Ledger, new_run_id
 from botropolis.core.memory import MemoryStore
 from botropolis.core.models import ModelClient
 from botropolis.core.registry import AgentRegistry
 from botropolis.core.schemas import (
     AgentResult,
+    CheckResult,
     CompanyReport,
     Context,
     Contract,
@@ -191,24 +193,70 @@ class CEO:
             pass
 
     def _verify(self, run_id: str, contract: Optional[Contract], report) -> None:
-        """Run a contract's machine checks and attach the evidence.
+        """Run a contract's machine checks, then the judge, and attach
+        the evidence.
 
         The builder/judge split: agents claim the work is done, the
         harness checks before the report is final. All checks passing
         keeps status "done"; any failure makes it "unverified". No
-        checks, nothing changes.
+        contract, nothing changes.
+
+        After the machine checks pass, a different agent, the
+        Reviewer, judges the report against the contract's done_when
+        and exclusions. A failed verdict flips the report to
+        "unverified" with the judge's reason as evidence. A skipped
+        judge (call failed, unparseable reply, no reviewer) keeps the
+        machine-check result. When the machine checks already failed,
+        the judge does not run.
         """
-        if contract is None or not contract.checks:
+        if contract is None:
             return
-        evidence = run_checks(contract.checks)
-        report.evidence = evidence
-        passed = sum(1 for item in evidence if item.passed)
-        report.status = "done" if passed == len(evidence) else "unverified"
-        self._record(
-            run_id,
-            "evidence_checked",
-            {"passed": passed, "total": len(evidence), "status": report.status},
-        )
+        if contract.checks:
+            evidence = run_checks(contract.checks)
+            report.evidence = evidence
+            passed = sum(1 for item in evidence if item.passed)
+            report.status = "done" if passed == len(evidence) else "unverified"
+            self._record(
+                run_id,
+                "evidence_checked",
+                {"passed": passed, "total": len(evidence), "status": report.status},
+            )
+            if report.status != "done":
+                report.judge = {
+                    "verdict": "skipped",
+                    "reason": "machine checks failed",
+                }
+                self._record(
+                    run_id,
+                    "judge_skipped",
+                    {"reason": "machine checks failed"},
+                )
+                return
+        try:
+            outcome = run_judge(self, contract, report)
+        except Exception:
+            outcome = {"verdict": "skipped", "reason": "judge call failed"}
+        report.judge = outcome
+        if outcome["verdict"] == "fail":
+            report.status = "unverified"
+            report.evidence.append(
+                CheckResult(
+                    command="judge",
+                    expected_exit_code=0,
+                    exit_code=1,
+                    passed=False,
+                    output_tail=str(outcome.get("reason", "")),
+                )
+            )
+            self._record(
+                run_id, "judge_failed", {"reason": outcome.get("reason", "")}
+            )
+        elif outcome["verdict"] == "pass":
+            self._record(run_id, "judge_passed", {})
+        else:
+            self._record(
+                run_id, "judge_skipped", {"reason": outcome.get("reason", "")}
+            )
 
     def score_departments(self, request: str) -> List[Tuple[str, int]]:
         """Score departments by keyword hits, highest first."""
