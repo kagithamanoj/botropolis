@@ -28,3 +28,22 @@ jobs:
 
       - name: Run offline demo
         run: python examples/demo.py > /dev/null
+
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Check formatting
+        run: cargo fmt --check --manifest-path rust/Cargo.toml
+
+      - name: Lint
+        run: cargo clippy --all-targets --manifest-path rust/Cargo.toml -- -D warnings
+
+      - name: Run tests
+        run: cargo test --manifest-path rust/Cargo.toml

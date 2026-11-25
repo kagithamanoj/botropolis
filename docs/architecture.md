@@ -307,3 +307,39 @@ the analytics tab works without any external service.
 the plan-only trainer runner, and the eval harness live there. A trained
 model re-enters the system by being registered in `models/registry.yaml`
 and referenced from an agent spec. See `docs/training-guide.md`.
+
+## Rust implementation
+
+`rust/` is a second implementation of the same framework, in the same
+repo. It is additive: the Python side is untouched and stays the
+reference, and the Rust side is removed or kept only once a later phase
+proves parity. Nothing is duplicated: the Rust code loads the same agent
+specs from `botropolis/agents/`, serves the same web UI from
+`botropolis/web/`, runs the same eval scenarios from
+`botropolis/eval/scenarios/`, and reads and writes the same file formats
+(run state JSON, task maps, memory and ledger SQLite databases, usage
+JSONL), so a run started by either side can be read by the other.
+
+The layout mirrors the Python modules: `src/agent.rs` (Agent, tool loop
+wiring), `src/tool_loop.rs` (the think-act-observe loop, same ACTION /
+FINAL protocol, plan-first, verify-before-done, same exits and approval
+wall), `src/tools/` (builtin tools, math, memory, jobs, consult, GWS),
+`src/registry.rs`, `src/models.rs` (OpenAI, Anthropic, Google, Ollama,
+plus the offline stub), `src/runstate.rs`, `src/taskmap.rs`,
+`src/ledger.rs`, `src/judge.rs`, `src/trace.rs`, `src/evidence.rs`,
+`src/orchestrator.rs` (the CEO), `src/eval.rs`, `src/usage.rs`,
+`src/server.rs` (axum, same endpoints as `botropolis/server.py`),
+`src/cli.rs` (same command surface as `botropolis/cli.py`).
+
+Two honest limits, stated in the code and the README rather than
+papered over: the Rust `math` tool is an expression evaluator with
+exact polynomial algebra, not a symbolic algebra system like the Python
+side's sympy tool; and training stays Python, the `training/` pipeline
+has no Rust port. The model client also builds its blocking HTTP client
+lazily on the first live model call, so stub-only runs (and the axum
+server, which drops agents inside the async runtime) never create a
+runtime they do not use.
+
+Toolchain: stable Rust via rustup; see `docs/rust-toolchain.md`. CI runs
+`cargo fmt --check`, `cargo clippy --all-targets` with warnings as
+errors, and `cargo test` on every push and pull request.
