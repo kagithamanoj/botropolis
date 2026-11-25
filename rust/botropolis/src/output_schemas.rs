@@ -189,9 +189,8 @@ pub fn parse_structured_output(
         let obj: &Map<String, Value> = match data.as_object() {
             Some(o) => o,
             None => {
-                last_error = format!(
-                    "output JSON for {schema_name} must be an object, not a list or value"
-                );
+                last_error =
+                    format!("output JSON for {schema_name} must be an object, not a list or value");
                 continue;
             }
         };
@@ -221,10 +220,9 @@ pub fn parse_structured_output(
         }
         return Ok(out);
     }
-    Err(OutputValidationError(
-        last_error
-            .if_empty_then(|| format!("output is empty, expected {schema_name} JSON")),
-    ))
+    Err(OutputValidationError(last_error.if_empty_then(|| {
+        format!("output is empty, expected {schema_name} JSON")
+    })))
 }
 
 trait IfEmpty {
@@ -255,11 +253,9 @@ mod tests {
         assert_eq!(out.summary, "done");
         assert_eq!(out.details, "all good");
         assert_eq!(out.key_points, vec!["a"]);
-        let fenced = parse_structured_output(
-            "```json\n{\"summary\": \"fenced\"}\n```",
-            "agent_output",
-        )
-        .unwrap();
+        let fenced =
+            parse_structured_output("```json\n{\"summary\": \"fenced\"}\n```", "agent_output")
+                .unwrap();
         assert_eq!(fenced.summary, "fenced");
     }
 
