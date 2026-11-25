@@ -12,12 +12,14 @@ use std::sync::{Arc, RwLock};
 use std::time::Instant;
 use thiserror::Error;
 
+use crate::ledger::Ledger;
 use crate::models::{ChatMessage, ModelClient, RealClient};
 use crate::output_schemas::{
     format_instruction, parse_structured_output, resolve_output_schema, AgentOutput,
 };
+use crate::runstate::RunStore;
 use crate::schemas::{AgentResult, Task};
-use crate::tool_loop::{run_tool_loop, LoopOpts};
+use crate::tool_loop::{run_tool_loop, EventCallback, LoopOpts, StateHook};
 use crate::tools::{get_tool_def, known_tool};
 
 pub const DEFAULT_MAX_STEPS: u32 = 8;
@@ -243,10 +245,26 @@ impl Agent {
         ]
     }
 
+    /// Append a ledger event. Never raises: the ledger is a side
+    /// channel, and a failing side channel must not break the run.
+    fn record(
+        &self,
+        ledger: &Option<Ledger>,
+        run_id: &Option<String>,
+        kind: &str,
+        payload: serde_json::Value,
+    ) {
+        if let (Some(ledger), Some(run_id)) = (ledger, run_id) {
+            let _ = ledger.record(run_id, kind, &self.name, payload);
+        }
+    }
+
     fn contract_output(
         &self,
         raw_text: &str,
         base_messages: &[ChatMessage],
+        ledger: &Option<Ledger>,
+        run_id: &Option<String>,
     ) -> Result<(String, HashMap<String, serde_json::Value>), String> {
         let provider = self.client().provider_for(&self.model);
         if provider == "stub" {
@@ -266,6 +284,12 @@ impl Agent {
         match parse_structured_output(raw_text, self.output_schema_name) {
             Ok(model) => Ok((model.render(), model.dump())),
             Err(first) => {
+                self.record(
+                    ledger,
+                    run_id,
+                    "output_repair",
+                    serde_json::json!({"error": first.to_string(), "attempt": 1}),
+                );
                 // One repair attempt with the errors spelled out.
                 let mut repair_messages = base_messages.to_vec();
                 repair_messages.push(ChatMessage::new("assistant", raw_text.to_string()));
@@ -294,9 +318,27 @@ impl Agent {
     /// without one do a single model call, as before. Uses the
     /// configured model when credentials exist, otherwise the offline
     /// stub. The stub response is always labeled as offline output.
-    pub fn run(&self, task: Task, opts: RunOpts) -> AgentResult {
+    ///
+    /// `ledger` and `run_id` are optional: when given, the run's events
+    /// (task assigned, tools called, answer produced, contract repairs,
+    /// failures) are appended to the ledger. `store` and `resume_state`
+    /// are for durable run state: with a store, tool runs write their
+    /// progress after every step; with `resume_state`, a tool run
+    /// continues an interrupted run from its completed steps instead
+    /// of starting over. Both only affect agents with a toolkit.
+    pub fn run(&self, task: Task, mut opts: RunOpts) -> AgentResult {
         let started = Instant::now();
         let task_id = task.id.clone();
+        if opts.run_id.is_none() && (opts.ledger.is_some() || opts.store.is_some()) {
+            opts.run_id = Some(crate::schemas::new_run_id());
+        }
+        let run_id = opts.run_id.clone();
+        self.record(
+            &opts.ledger,
+            &run_id,
+            "task_assigned",
+            serde_json::to_value(&task).unwrap_or(serde_json::Value::Null),
+        );
         if !self.toolkit.is_empty() {
             return self.run_with_tools(task, started, opts);
         }
@@ -304,6 +346,12 @@ impl Agent {
         let raw = match self.client().chat(&self.model, &messages) {
             Ok(text) => text,
             Err(e) => {
+                self.record(
+                    &opts.ledger,
+                    &run_id,
+                    "agent_failed",
+                    serde_json::json!({"error": e.to_string()}),
+                );
                 let mut result =
                     AgentResult::failed(&self.name, &self.department, &task_id, e.to_string());
                 result.elapsed_seconds = started.elapsed().as_secs_f64();
@@ -312,7 +360,7 @@ impl Agent {
         };
         let (_kind, parsed) = parse_model_reply(&raw);
         let raw = parsed;
-        match self.contract_output(&raw, &messages) {
+        match self.contract_output(&raw, &messages, &opts.ledger, &run_id) {
             Ok((output, structured)) => {
                 let provider = self.client().provider_for(&self.model);
                 let usage = self.client().last_usage();
@@ -345,7 +393,7 @@ impl Agent {
                     "output_validated".to_string(),
                     serde_json::Value::Bool(provider != "stub"),
                 );
-                AgentResult {
+                let result = AgentResult {
                     agent_name: self.name.clone(),
                     department: self.department.clone(),
                     task_id,
@@ -357,9 +405,27 @@ impl Agent {
                     elapsed_seconds: started.elapsed().as_secs_f64(),
                     tool_calls: Vec::new(),
                     structured,
-                }
+                };
+                self.record(
+                    &opts.ledger,
+                    &run_id,
+                    "output_produced",
+                    serde_json::json!({
+                        "summary": result.structured.get("summary").cloned().unwrap_or(serde_json::Value::String(String::new())),
+                        "structured": result.structured,
+                        "output_validated": provider != "stub",
+                        "elapsed_seconds": result.elapsed_seconds,
+                    }),
+                );
+                result
             }
             Err(e) => {
+                self.record(
+                    &opts.ledger,
+                    &run_id,
+                    "agent_failed",
+                    serde_json::json!({"error": e}),
+                );
                 let mut result = AgentResult::failed(&self.name, &self.department, &task_id, e);
                 result.elapsed_seconds = started.elapsed().as_secs_f64();
                 result
@@ -377,20 +443,88 @@ impl Agent {
     /// and says why.
     fn run_with_tools(&self, task: Task, started: Instant, opts: RunOpts) -> AgentResult {
         let task_id = task.id.clone();
+        let run_id = opts.run_id.clone();
+        let ledger = opts.ledger.clone();
+        let store = opts.store.clone();
+
+        // The loop's events go to the ledger and on to the caller's
+        // callback, in that order. Tool calls, blocks, plans, and
+        // answer checks are the ledger kinds the loop produces.
+        let mut user_event = opts.on_event;
+        let agent_name = self.name.clone();
+        let run_id_for_events = run_id.clone();
+        let ledger_for_events = ledger.clone();
+        let wrapped_event: EventCallback = Box::new(move |kind, payload| {
+            if let Some(ledger) = &ledger_for_events {
+                let event_kind = match kind {
+                    "tool_finished" => Some("tool_called"),
+                    "tool_blocked" => Some("tool_blocked"),
+                    "plan_recorded" => Some("plan_recorded"),
+                    "answer_checked" => Some("answer_checked"),
+                    _ => None,
+                };
+                if let Some(event_kind) = event_kind {
+                    let _ = ledger.record(
+                        run_id_for_events.as_deref().unwrap_or(""),
+                        event_kind,
+                        &agent_name,
+                        payload.clone(),
+                    );
+                }
+            }
+            if let Some(cb) = user_event.as_mut() {
+                cb(kind, payload);
+            }
+        });
+
+        // Run state is written after every step, and the task map
+        // beside it, when a store is attached. A caller hook, when
+        // given, runs after the store write.
+        let mut user_hook = opts.state_hook;
+        let store_for_hook = store.clone();
+        let composed_hook: StateHook = Box::new(move |snap| {
+            if let Some(store) = &store_for_hook {
+                let state = snap.to_json();
+                let _ = store.save(&state);
+                crate::taskmap::write_map(store, &state);
+            }
+            if let Some(hook) = user_hook.as_mut() {
+                hook(snap);
+            }
+        });
+
+        // On resume, the map is the run's progress in words. The
+        // continuing agent reads it before it starts again.
+        let map_text = match opts.map_text {
+            Some(text) => Some(text),
+            None => match (&opts.resume_state, &store, &run_id) {
+                (Some(_), Some(store), Some(run_id)) => {
+                    crate::taskmap::read_map(store, run_id).ok()
+                }
+                _ => None,
+            },
+        };
+
         let mut loop_opts = LoopOpts {
             token_budget: opts.token_budget.or(self.token_budget),
             time_budget_seconds: opts.time_budget_seconds.or(self.time_budget_seconds),
-            run_id: opts.run_id,
+            run_id: run_id.clone(),
             resume_state: opts.resume_state,
-            map_text: opts.map_text,
+            map_text,
             run_context: opts.run_context,
             registry: opts.registry,
-            on_event: opts.on_event,
-            state_hook: opts.state_hook,
+            on_event: Some(wrapped_event),
+            state_hook: Some(composed_hook),
         };
         let (raw_output, tool_calls, usage) = match run_tool_loop(self, &task, &mut loop_opts) {
             Ok(out) => out,
             Err(e) => {
+                self.record(
+                    &ledger,
+                    &run_id,
+                    "agent_failed",
+                    serde_json::json!({"error": e}),
+                );
                 let mut result = AgentResult::failed(&self.name, &self.department, &task_id, e);
                 result.elapsed_seconds = started.elapsed().as_secs_f64();
                 return result;
@@ -449,7 +583,13 @@ impl Agent {
                 "output_validated".to_string(),
                 serde_json::Value::Bool(false),
             );
-            let mut result = AgentResult {
+            self.record(
+                &ledger,
+                &run_id,
+                "run_escalated",
+                serde_json::json!({"reason": reason, "tool_calls": tool_calls.len()}),
+            );
+            return AgentResult {
                 agent_name: self.name.clone(),
                 department: self.department.clone(),
                 task_id,
@@ -462,18 +602,14 @@ impl Agent {
                 tool_calls,
                 structured: HashMap::new(),
             };
-            result
-                .metadata
-                .insert("escalated".to_string(), serde_json::Value::Bool(true));
-            return result;
         }
-        match self.contract_output(&raw_output, &self.build_messages(&task)) {
+        match self.contract_output(&raw_output, &self.build_messages(&task), &ledger, &run_id) {
             Ok((output, structured)) => {
                 metadata.insert(
                     "output_validated".to_string(),
                     serde_json::Value::Bool(provider != "stub"),
                 );
-                AgentResult {
+                let result = AgentResult {
                     agent_name: self.name.clone(),
                     department: self.department.clone(),
                     task_id,
@@ -485,9 +621,28 @@ impl Agent {
                     elapsed_seconds: started.elapsed().as_secs_f64(),
                     tool_calls,
                     structured,
-                }
+                };
+                self.record(
+                    &ledger,
+                    &run_id,
+                    "output_produced",
+                    serde_json::json!({
+                        "summary": result.structured.get("summary").cloned().unwrap_or(serde_json::Value::String(String::new())),
+                        "structured": result.structured,
+                        "output_validated": provider != "stub",
+                        "tool_calls": result.tool_calls.len(),
+                        "elapsed_seconds": result.elapsed_seconds,
+                    }),
+                );
+                result
             }
             Err(e) => {
+                self.record(
+                    &ledger,
+                    &run_id,
+                    "agent_failed",
+                    serde_json::json!({"error": e}),
+                );
                 let mut result = AgentResult::failed(&self.name, &self.department, &task_id, e);
                 result.elapsed_seconds = started.elapsed().as_secs_f64();
                 result.tool_calls = tool_calls;
@@ -525,6 +680,10 @@ pub struct RunOpts {
     pub map_text: Option<String>,
     pub run_context: Option<std::rc::Rc<std::cell::RefCell<crate::tool_loop::RunContext>>>,
     pub registry: Option<std::sync::Arc<crate::registry::AgentRegistry>>,
+    /// The run ledger, when events should be recorded.
+    pub ledger: Option<Ledger>,
+    /// The run state store, when progress should be written to disk.
+    pub store: Option<RunStore>,
     /// Called as `on_event(kind, payload)` with tool_started,
     /// tool_finished, tool_blocked, plan_recorded, and answer_checked.
     pub on_event: Option<crate::tool_loop::EventCallback>,
