@@ -192,7 +192,7 @@ even single-shot agents benefit. No store attached, nothing changes.
 The model is one part of a run. The harness around it is the rest:
 the contract the work is held to, the walls it cannot cross, the
 state it leaves behind, and the checks that decide whether "done"
-means done. Seven pieces:
+means done. Eight pieces:
 
 **Contracts.** A `Contract` (goal, scope, exclusions, done_when, and
 optional machine checks) can be attached to a run through
@@ -247,6 +247,21 @@ the CEO finalizes a report for a contracted run, the checks run
 inside the agent sandbox and the results ride on the report as
 evidence. All passing keeps the report `done`; any failure makes it
 `unverified`. The agent claims, the harness verifies.
+
+**Judge.** Machine checks catch what a shell command can catch;
+they cannot read whether a report actually meets its contract. So
+after the checks pass, a different agent judges it: the Reviewer
+(Sofia) reads the report against the contract's done-when items and
+exclusions in one single-shot call (`botropolis/core/judge.py`) and
+replies `VERDICT: PASS` or `VERDICT: FAIL` with one reason. A
+failed verdict flips the report to `unverified` with the reason
+attached as evidence, exactly like a failed machine check. A pass
+leaves the status as the checks left it. The judge is a direct
+model call, never an agent run, so it cannot recurse into judging.
+When the judge call errors, its reply cannot be parsed, or there
+is no reviewer, the judge is recorded as skipped and the
+machine-check result stands; when the machine checks already
+failed, the judge does not run. Uncontracted runs are not judged.
 
 **Approval wall.** A run can flag tools as needing approval
 (`needs_approval` on the task, `approved` for the human's yes). At

@@ -221,6 +221,7 @@ class CompanyReport:
     summary: str = ""
     contract: Optional[Contract] = None
     evidence: List[CheckResult] = field(default_factory=list)
+    judge: Dict[str, Any] = field(default_factory=dict)
     status: str = "done"
     elapsed_seconds: float = 0.0
     created_at: float = field(default_factory=time.time)
@@ -264,6 +265,7 @@ class TeamReport:
     synthesis: str = ""
     contract: Optional[Contract] = None
     evidence: List[CheckResult] = field(default_factory=list)
+    judge: Dict[str, Any] = field(default_factory=dict)
     status: str = "done"
     elapsed_seconds: float = 0.0
     created_at: float = field(default_factory=time.time)
