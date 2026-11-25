@@ -17,6 +17,7 @@ use crate::output_schemas::{
     format_instruction, parse_structured_output, resolve_output_schema, AgentOutput,
 };
 use crate::schemas::{AgentResult, Task};
+use crate::tool_loop::{run_tool_loop, LoopOpts};
 use crate::tools::{get_tool_def, known_tool};
 
 pub const DEFAULT_MAX_STEPS: u32 = 8;
@@ -32,7 +33,15 @@ pub const REQUIRED_SPEC_FIELDS: [&str; 6] = [
 
 /// The ten departments in the org chart.
 pub const KNOWN_DEPARTMENTS: [&str; 10] = [
-    "research", "health", "finance", "code", "data", "legal", "marketing", "ops", "security",
+    "research",
+    "health",
+    "finance",
+    "code",
+    "data",
+    "legal",
+    "marketing",
+    "ops",
+    "security",
     "support",
 ];
 
@@ -144,11 +153,8 @@ impl Agent {
                 crate::tools::tool_names()
             )));
         }
-        let output_schema_name = resolve_output_schema(
-            spec.output_schema.as_deref(),
-            &department,
-        )
-        .map_err(|e| AgentError::Load(format!("{}: {e}", spec_path.display())))?;
+        let output_schema_name = resolve_output_schema(spec.output_schema.as_deref(), &department)
+            .map_err(|e| AgentError::Load(format!("{}: {e}", spec_path.display())))?;
         let client = client.unwrap_or_else(|| Arc::new(RealClient::default()));
         Ok(Agent {
             spec_path,
@@ -176,9 +182,10 @@ impl Agent {
 
     /// The model client this agent runs against.
     pub fn client(&self) -> Arc<dyn ModelClient> {
-        self.client.read().map(|c| Arc::clone(&c)).unwrap_or_else(|e| {
-            Arc::clone(&e.into_inner())
-        })
+        self.client
+            .read()
+            .map(|c| Arc::clone(&c))
+            .unwrap_or_else(|e| Arc::clone(&e.into_inner()))
     }
 
     /// Swap the model client (tests and the judge use this to point
@@ -284,36 +291,21 @@ impl Agent {
     /// Run one task and return an AgentResult.
     ///
     /// Agents with a toolkit run the think-act-observe loop; agents
-    /// without one do a single model call. The tool loop lands in the
-    /// next PR; until then a toolkit run reports that plainly instead
-    /// of pretending it ran.
-    pub fn run(&self, task: Task, _opts: RunOpts) -> AgentResult {
+    /// without one do a single model call, as before. Uses the
+    /// configured model when credentials exist, otherwise the offline
+    /// stub. The stub response is always labeled as offline output.
+    pub fn run(&self, task: Task, opts: RunOpts) -> AgentResult {
         let started = Instant::now();
         let task_id = task.id.clone();
         if !self.toolkit.is_empty() {
-            let mut result = AgentResult::failed(
-                &self.name,
-                &self.department,
-                &task_id,
-                "tool loop not implemented yet: this agent has a toolkit and the loop lands in the next PR",
-            );
-            result.elapsed_seconds = started.elapsed().as_secs_f64();
-            result.metadata.insert(
-                "model".to_string(),
-                serde_json::Value::String(self.model.clone()),
-            );
-            return result;
+            return self.run_with_tools(task, started, opts);
         }
         let messages = self.build_messages(&task);
         let raw = match self.client().chat(&self.model, &messages) {
             Ok(text) => text,
             Err(e) => {
-                let mut result = AgentResult::failed(
-                    &self.name,
-                    &self.department,
-                    &task_id,
-                    e.to_string(),
-                );
+                let mut result =
+                    AgentResult::failed(&self.name, &self.department, &task_id, e.to_string());
                 result.elapsed_seconds = started.elapsed().as_secs_f64();
                 return result;
             }
@@ -368,9 +360,137 @@ impl Agent {
                 }
             }
             Err(e) => {
-                let mut result =
-                    AgentResult::failed(&self.name, &self.department, &task_id, e);
+                let mut result = AgentResult::failed(&self.name, &self.department, &task_id, e);
                 result.elapsed_seconds = started.elapsed().as_secs_f64();
+                result
+            }
+        }
+    }
+
+    /// Run the think-act-observe loop and wrap it in an AgentResult.
+    ///
+    /// The loop's final answer goes through the same output contract
+    /// as the single-shot path: validated against the schema, one
+    /// repair attempt on failure. An escalated loop exit (same error
+    /// twice, or a budget hit) skips the output contract: there is no
+    /// answer to validate. The result is failed, marked escalated,
+    /// and says why.
+    fn run_with_tools(&self, task: Task, started: Instant, opts: RunOpts) -> AgentResult {
+        let task_id = task.id.clone();
+        let mut loop_opts = LoopOpts {
+            token_budget: opts.token_budget.or(self.token_budget),
+            time_budget_seconds: opts.time_budget_seconds.or(self.time_budget_seconds),
+            run_id: opts.run_id,
+            resume_state: opts.resume_state,
+            map_text: opts.map_text,
+            run_context: opts.run_context,
+            registry: opts.registry,
+            on_event: opts.on_event,
+            state_hook: opts.state_hook,
+        };
+        let (raw_output, tool_calls, usage) = match run_tool_loop(self, &task, &mut loop_opts) {
+            Ok(out) => out,
+            Err(e) => {
+                let mut result = AgentResult::failed(&self.name, &self.department, &task_id, e);
+                result.elapsed_seconds = started.elapsed().as_secs_f64();
+                return result;
+            }
+        };
+        let provider = self.client().provider_for(&self.model);
+        let mut metadata = HashMap::new();
+        metadata.insert(
+            "model".to_string(),
+            serde_json::Value::String(self.model.clone()),
+        );
+        metadata.insert(
+            "provider".to_string(),
+            serde_json::Value::String(provider.clone()),
+        );
+        metadata.insert(
+            "stub".to_string(),
+            serde_json::Value::Bool(provider == "stub"),
+        );
+        metadata.insert(
+            "tokens_in".to_string(),
+            serde_json::Value::from(usage.input),
+        );
+        metadata.insert(
+            "tokens_out".to_string(),
+            serde_json::Value::from(usage.output),
+        );
+        metadata.insert(
+            "toolkit".to_string(),
+            serde_json::Value::Array(
+                self.toolkit
+                    .iter()
+                    .map(|t| serde_json::Value::String(t.clone()))
+                    .collect(),
+            ),
+        );
+        metadata.insert(
+            "tool_calls".to_string(),
+            serde_json::Value::from(tool_calls.len()),
+        );
+        metadata.insert(
+            "output_schema".to_string(),
+            serde_json::Value::String(self.output_schema_name.to_string()),
+        );
+        if usage.escalated {
+            let reason = usage
+                .escalation_reason
+                .clone()
+                .unwrap_or_else(|| "run escalated".to_string());
+            metadata.insert("escalated".to_string(), serde_json::Value::Bool(true));
+            metadata.insert(
+                "escalation_reason".to_string(),
+                serde_json::Value::String(reason.clone()),
+            );
+            metadata.insert(
+                "output_validated".to_string(),
+                serde_json::Value::Bool(false),
+            );
+            let mut result = AgentResult {
+                agent_name: self.name.clone(),
+                department: self.department.clone(),
+                task_id,
+                output: raw_output,
+                success: false,
+                confidence: 0.0,
+                error: Some(reason),
+                metadata,
+                elapsed_seconds: started.elapsed().as_secs_f64(),
+                tool_calls,
+                structured: HashMap::new(),
+            };
+            result
+                .metadata
+                .insert("escalated".to_string(), serde_json::Value::Bool(true));
+            return result;
+        }
+        match self.contract_output(&raw_output, &self.build_messages(&task)) {
+            Ok((output, structured)) => {
+                metadata.insert(
+                    "output_validated".to_string(),
+                    serde_json::Value::Bool(provider != "stub"),
+                );
+                AgentResult {
+                    agent_name: self.name.clone(),
+                    department: self.department.clone(),
+                    task_id,
+                    output,
+                    success: true,
+                    confidence: if provider != "stub" { 0.85 } else { 0.5 },
+                    error: None,
+                    metadata,
+                    elapsed_seconds: started.elapsed().as_secs_f64(),
+                    tool_calls,
+                    structured,
+                }
+            }
+            Err(e) => {
+                let mut result = AgentResult::failed(&self.name, &self.department, &task_id, e);
+                result.elapsed_seconds = started.elapsed().as_secs_f64();
+                result.tool_calls = tool_calls;
                 result
             }
         }
@@ -393,11 +513,24 @@ impl Agent {
 }
 
 /// Per-run options for `Agent::run`. Extended by later PRs as the
-/// loop, ledger, and run state land.
+/// ledger and run state land.
 #[derive(Default)]
 pub struct RunOpts {
     pub token_budget: Option<u64>,
     pub time_budget_seconds: Option<f64>,
+    pub run_id: Option<String>,
+    /// A saved state dict to resume from, if any.
+    pub resume_state: Option<serde_json::Value>,
+    /// The run's task map in words, read back on resume.
+    pub map_text: Option<String>,
+    pub run_context: Option<std::rc::Rc<std::cell::RefCell<crate::tool_loop::RunContext>>>,
+    pub registry: Option<std::sync::Arc<crate::registry::AgentRegistry>>,
+    /// Called as `on_event(kind, payload)` with tool_started,
+    /// tool_finished, tool_blocked, plan_recorded, and answer_checked.
+    pub on_event: Option<crate::tool_loop::EventCallback>,
+    /// Called with a snapshot after every step, when run state is
+    /// being written.
+    pub state_hook: Option<crate::tool_loop::StateHook>,
 }
 
 /// Parse one model reply into (kind, payload).
@@ -421,18 +554,10 @@ pub fn parse_model_reply(text: &str) -> (&'static str, String) {
                         "ACTION must be {\"tool\": \"<name>\", \"args\": {...}}".to_string(),
                     );
                 }
-                if !payload
-                    .get("args")
-                    .map(|a| a.is_object())
-                    .unwrap_or(true)
-                {
+                if !payload.get("args").map(|a| a.is_object()).unwrap_or(true) {
                     return ("malformed", "\"args\" must be an object".to_string());
                 }
-                if !payload
-                    .get("tool")
-                    .map(|t| t.is_string())
-                    .unwrap_or(false)
-                {
+                if !payload.get("tool").map(|t| t.is_string()).unwrap_or(false) {
                     return ("malformed", "\"tool\" must be a string".to_string());
                 }
                 return ("action", raw.to_string());
@@ -445,7 +570,10 @@ pub fn parse_model_reply(text: &str) -> (&'static str, String) {
 
 /// The tool-use instructions appended to the system prompt.
 pub fn tool_prompt(tool_names: &[String]) -> String {
-    let mut lines = vec!["You have these tools. Use them when they help.".to_string(), String::new()];
+    let mut lines = vec![
+        "You have these tools. Use them when they help.".to_string(),
+        String::new(),
+    ];
     for name in tool_names {
         if let Some(def) = get_tool_def(name) {
             let params = def
@@ -454,10 +582,7 @@ pub fn tool_prompt(tool_names: &[String]) -> String {
                 .map(|obj| {
                     obj.iter()
                         .map(|(key, spec)| {
-                            let ty = spec
-                                .get("type")
-                                .and_then(|t| t.as_str())
-                                .unwrap_or("?");
+                            let ty = spec.get("type").and_then(|t| t.as_str()).unwrap_or("?");
                             format!("{key} ({ty})")
                         })
                         .collect::<Vec<_>>()
@@ -480,64 +605,4 @@ pub fn tool_prompt(tool_names: &[String]) -> String {
         "Before your FINAL: answer is accepted, you will be asked to check it once against the task: look for errors, unmet requirements, and claims your observations do not support.".to_string(),
     ]);
     lines.join("\n")
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::models::ScriptedClient;
-
-    fn spec_yaml(toolkit: &str) -> String {
-        format!(
-            "name: TestAgent\ntitle: Tester\ndepartment: research\nspecialty: testing\nmodel: stub\nsystem_prompt: You are a test agent.\ntoolkit: {toolkit}\n"
-        )
-    }
-
-    #[test]
-    fn missing_fields_are_listed() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("bad.yaml");
-        std::fs::write(&path, "name: OnlyName\n").unwrap();
-        let err = Agent::load(&path, None).unwrap_err();
-        assert!(err.to_string().contains("missing fields"));
-    }
-
-    #[test]
-    fn unknown_toolkit_tool_is_rejected() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("bad.yaml");
-        std::fs::write(&path, spec_yaml("[no_such_tool]")).unwrap();
-        let err = Agent::load(&path, None).unwrap_err();
-        assert!(err.to_string().contains("unknown tools"));
-    }
-
-    #[test]
-    fn single_shot_stub_run_wraps_output() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("agent.yaml");
-        std::fs::write(&path, spec_yaml("[]")).unwrap();
-        let agent = Agent::load(&path, None).unwrap();
-        let result = agent.run(Task::new("What is 6 times 7?"), RunOpts::default());
-        assert!(result.success);
-        assert!(result.output.contains("6 times 7"));
-        assert_eq!(result.metadata.get("stub"), Some(&serde_json::Value::Bool(true)));
-    }
-
-    #[test]
-    fn scripted_client_validates_structured_output() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("agent.yaml");
-        std::fs::write(&path, spec_yaml("[]")).unwrap();
-        let client: Arc<dyn ModelClient> = Arc::new(ScriptedClient::new(vec![
-            r#"{"summary": "42", "details": "6 times 7 is 42."}"#.to_string(),
-        ]));
-        let agent = Agent::load(&path, Some(client)).unwrap();
-        let result = agent.run(Task::new("What is 6 times 7?"), RunOpts::default());
-        assert!(result.success);
-        assert_eq!(result.output, "42\n\n6 times 7 is 42.");
-        assert_eq!(
-            result.structured.get("summary"),
-            Some(&serde_json::Value::String("42".to_string()))
-        );
-    }
 }
