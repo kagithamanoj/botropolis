@@ -7,6 +7,7 @@
 
 pub mod agent;
 pub mod cli;
+pub mod crypto;
 pub mod eval;
 pub mod evidence;
 pub mod judge;

@@ -50,6 +50,14 @@ CREATE TABLE IF NOT EXISTS sessions (
     created_at REAL NOT NULL,
     expires_at REAL NOT NULL
 );
+CREATE TABLE IF NOT EXISTS provider_keys (
+    team_id TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    ciphertext BLOB NOT NULL,
+    nonce BLOB NOT NULL,
+    created_at REAL NOT NULL,
+    PRIMARY KEY (team_id, provider)
+);
 CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys (key_hash);
 CREATE INDEX IF NOT EXISTS idx_sessions_hash ON sessions (token_hash);
 ";
@@ -357,6 +365,99 @@ impl PlatformDb {
             .map_err(|e| e.to_string())?;
         Ok(changed > 0)
     }
+
+    /// Providers a team may store keys for.
+    pub const PROVIDERS: [&'static str; 3] = ["openai", "anthropic", "google"];
+
+    /// Store (or replace) a team's provider key, encrypted under
+    /// the platform master key. Refuses when the master key is not
+    /// set, rather than storing plaintext.
+    pub fn store_provider_key(
+        &self,
+        team_id: &str,
+        provider: &str,
+        key: &str,
+    ) -> Result<(), String> {
+        let provider = provider.trim().to_lowercase();
+        if !Self::PROVIDERS.contains(&provider.as_str()) {
+            return Err(format!("unknown provider: {provider}"));
+        }
+        if key.trim().is_empty() {
+            return Err("provider key must not be empty".to_string());
+        }
+        let master = crate::crypto::master_key()?;
+        let (nonce, ciphertext) = crate::crypto::encrypt(&master, key.trim())?;
+        let conn = self.conn.lock().map_err(|e| e.to_string())?;
+        conn.execute(
+            "INSERT INTO provider_keys (team_id, provider, ciphertext, nonce, created_at) VALUES (?1, ?2, ?3, ?4, ?5)
+             ON CONFLICT(team_id, provider) DO UPDATE SET ciphertext = excluded.ciphertext, nonce = excluded.nonce, created_at = excluded.created_at",
+            params![team_id, provider, ciphertext, nonce, now_secs()],
+        )
+        .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    /// Decrypt one of a team's provider keys. None when the team
+    /// has none for that provider, or the master key is missing or
+    /// wrong.
+    pub fn provider_key(&self, team_id: &str, provider: &str) -> Option<String> {
+        let master = crate::crypto::master_key().ok()?;
+        let (ciphertext, nonce): (Vec<u8>, Vec<u8>) = {
+            let conn = self.conn.lock().ok()?;
+            conn.query_row(
+                "SELECT ciphertext, nonce FROM provider_keys WHERE team_id = ?1 AND provider = ?2",
+                params![team_id, provider],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .ok()?
+        };
+        crate::crypto::decrypt(&master, &nonce, &ciphertext).ok()
+    }
+
+    /// All of a team's provider keys, decrypted. Providers that
+    /// fail to decrypt are skipped, never returned half-open.
+    pub fn provider_keys(&self, team_id: &str) -> std::collections::HashMap<String, String> {
+        let mut out = std::collections::HashMap::new();
+        for provider in Self::PROVIDERS {
+            if let Some(key) = self.provider_key(team_id, provider) {
+                out.insert(provider.to_string(), key);
+            }
+        }
+        out
+    }
+
+    /// Which providers a team has keys for. Names only, never key
+    /// material.
+    pub fn list_provider_keys(&self, team_id: &str) -> Vec<String> {
+        let conn = match self.conn.lock() {
+            Ok(conn) => conn,
+            Err(_) => return Vec::new(),
+        };
+        let mut stmt = match conn
+            .prepare("SELECT provider FROM provider_keys WHERE team_id = ?1 ORDER BY provider")
+        {
+            Ok(stmt) => stmt,
+            Err(_) => return Vec::new(),
+        };
+        let rows = match stmt.query_map(params![team_id], |row| row.get::<_, String>(0)) {
+            Ok(rows) => rows,
+            Err(_) => return Vec::new(),
+        };
+        rows.filter_map(|row| row.ok()).collect()
+    }
+
+    /// Delete one of a team's provider keys. Returns false when the
+    /// team has none for that provider.
+    pub fn delete_provider_key(&self, team_id: &str, provider: &str) -> Result<bool, String> {
+        let conn = self.conn.lock().map_err(|e| e.to_string())?;
+        let changed = conn
+            .execute(
+                "DELETE FROM provider_keys WHERE team_id = ?1 AND provider = ?2",
+                params![team_id, provider],
+            )
+            .map_err(|e| e.to_string())?;
+        Ok(changed > 0)
+    }
 }
 
 #[cfg(test)]
@@ -445,6 +546,52 @@ mod tests {
         let found = db.team_from_session(&token).unwrap();
         assert_eq!(found.id, team.id);
         assert!(db.team_from_session("no-such-token").is_none());
+    }
+
+    #[test]
+    fn provider_keys_roundtrip_and_refuse_without_master_key() {
+        use crate::test_support::lock_env;
+        let _guard = lock_env();
+        let (_dir, db) = test_db();
+        let team = db
+            .create_team("Acme", "acme@example.com", "correct horse")
+            .unwrap();
+        std::env::remove_var(crate::crypto::MASTER_KEY_ENV);
+        assert!(db
+            .store_provider_key(&team.id, "openai", "sk-team-key")
+            .is_err());
+        std::env::set_var(crate::crypto::MASTER_KEY_ENV, "test master key");
+        db.store_provider_key(&team.id, "openai", "sk-team-key")
+            .unwrap();
+        assert_eq!(
+            db.provider_key(&team.id, "openai").as_deref(),
+            Some("sk-team-key")
+        );
+        assert_eq!(db.list_provider_keys(&team.id), vec!["openai"]);
+        assert!(db
+            .store_provider_key(&team.id, "unknown-provider", "x")
+            .is_err());
+        assert!(db.delete_provider_key(&team.id, "openai").unwrap());
+        assert!(db.provider_key(&team.id, "openai").is_none());
+        assert!(db.list_provider_keys(&team.id).is_empty());
+        std::env::remove_var(crate::crypto::MASTER_KEY_ENV);
+    }
+
+    #[test]
+    fn provider_key_plaintext_never_in_the_database_file() {
+        use crate::test_support::lock_env;
+        let _guard = lock_env();
+        let (_dir, db) = test_db();
+        let team = db
+            .create_team("Acme", "acme@example.com", "correct horse")
+            .unwrap();
+        std::env::set_var(crate::crypto::MASTER_KEY_ENV, "test master key");
+        db.store_provider_key(&team.id, "openai", "sk-team-key-12345")
+            .unwrap();
+        let bytes = std::fs::read(db.path()).unwrap();
+        let text = String::from_utf8_lossy(&bytes);
+        assert!(!text.contains("sk-team-key-12345"));
+        std::env::remove_var(crate::crypto::MASTER_KEY_ENV);
     }
 
     #[test]
