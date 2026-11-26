@@ -18,6 +18,7 @@
 
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::env;
 use std::path::{Path, PathBuf};
@@ -130,14 +131,45 @@ fn env_key(provider: &str) -> Option<&'static str> {
     }
 }
 
+// Provider keys for the request running on this thread, set by the
+// server from the requesting team's stored keys (BYOK). They win
+// over the platform environment keys.
+thread_local! {
+    static REQUEST_KEYS: RefCell<HashMap<String, String>> = RefCell::new(HashMap::new());
+}
+
+/// Run `f` with these provider keys in scope for this thread.
+pub fn with_request_provider_keys<R>(keys: &HashMap<String, String>, f: impl FnOnce() -> R) -> R {
+    let previous = REQUEST_KEYS.with(|cell| cell.replace(keys.clone()));
+    let out = f();
+    REQUEST_KEYS.with(|cell| cell.replace(previous));
+    out
+}
+
+fn request_key(provider: &str) -> Option<String> {
+    REQUEST_KEYS.with(|cell| cell.borrow().get(provider).cloned())
+}
+
+/// The key to use for a provider: the requesting team's stored key
+/// first, then the platform environment key. None when neither
+/// exists, which is when the offline stub takes over.
+pub fn key_for_provider(provider: &str) -> Option<String> {
+    if let Some(key) = request_key(provider) {
+        if !key.is_empty() {
+            return Some(key);
+        }
+    }
+    match env_key(provider) {
+        Some(var) => env::var(var).ok().filter(|v| !v.is_empty()),
+        None => None,
+    }
+}
+
 fn provider_has_credentials(provider: &str) -> bool {
     match provider {
         "stub" => true,
         "ollama" => true, // local server; reachability is checked at call time
-        _ => match env_key(provider) {
-            Some(key) => env::var(key).map(|v| !v.is_empty()).unwrap_or(false),
-            None => false,
-        },
+        _ => key_for_provider(provider).is_some(),
     }
 }
 
@@ -288,7 +320,7 @@ impl RealClient {
         model_id: &str,
         messages: &[ChatMessage],
     ) -> Result<(String, Usage), ModelError> {
-        let key = env::var("OPENAI_API_KEY").unwrap_or_default();
+        let key = key_for_provider("openai").unwrap_or_default();
         let resp = self
             .http_client()
             .post("https://api.openai.com/v1/chat/completions")
@@ -319,7 +351,7 @@ impl RealClient {
         model_id: &str,
         messages: &[ChatMessage],
     ) -> Result<(String, Usage), ModelError> {
-        let key = env::var("ANTHROPIC_API_KEY").unwrap_or_default();
+        let key = key_for_provider("anthropic").unwrap_or_default();
         let system: Vec<&str> = messages
             .iter()
             .filter(|m| m.role == "system")
@@ -368,7 +400,7 @@ impl RealClient {
         model_id: &str,
         messages: &[ChatMessage],
     ) -> Result<(String, Usage), ModelError> {
-        let key = env::var("GOOGLE_API_KEY").unwrap_or_default();
+        let key = key_for_provider("google").unwrap_or_default();
         let system: Vec<&str> = messages
             .iter()
             .filter(|m| m.role == "system")
@@ -605,6 +637,30 @@ mod tests {
         assert_eq!(first, second);
         assert!(first.contains("[offline stub"));
         assert!(first.contains("What is 6 times 7?"));
+    }
+
+    #[test]
+    fn team_key_wins_over_platform_key_then_stub() {
+        let _guard = crate::test_support::lock_env();
+        std::env::remove_var("OPENAI_API_KEY");
+        let client = RealClient::new("gpt-4o");
+        assert_eq!(client.resolve_provider("gpt-4o"), "stub");
+        let mut team_keys = HashMap::new();
+        team_keys.insert("openai".to_string(), "sk-team-key".to_string());
+        with_request_provider_keys(&team_keys, || {
+            assert_eq!(client.resolve_provider("gpt-4o"), "openai");
+            assert_eq!(key_for_provider("openai").as_deref(), Some("sk-team-key"));
+        });
+        std::env::set_var("OPENAI_API_KEY", "sk-platform-key");
+        assert_eq!(client.resolve_provider("gpt-4o"), "openai");
+        assert_eq!(
+            key_for_provider("openai").as_deref(),
+            Some("sk-platform-key")
+        );
+        with_request_provider_keys(&team_keys, || {
+            assert_eq!(key_for_provider("openai").as_deref(), Some("sk-team-key"));
+        });
+        std::env::remove_var("OPENAI_API_KEY");
     }
 
     #[test]

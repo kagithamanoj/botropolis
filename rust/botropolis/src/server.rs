@@ -15,6 +15,9 @@
 //!     POST /teams/api-keys   Create a team API key (shown once)
 //!     GET  /teams/api-keys   List a team's API keys (metadata only)
 //!     DELETE /teams/api-keys/{id} Revoke one of a team's API keys
+//!     POST /teams/provider-keys Store a team provider key (BYOK)
+//!     GET  /teams/provider-keys List stored provider key names only
+//!     DELETE /teams/provider-keys/{provider} Delete a stored key
 //!     GET  /                 Web UI (static files under /static)
 //!
 //! The web UI lives in botropolis/web/ and needs no build step. Agent
@@ -96,6 +99,16 @@ impl AppState {
         let ceo = CEO::for_tenant(Some(Arc::clone(&self.registry)), tenant_id)?;
         tenants.insert(tenant_id.to_string(), ceo.clone());
         Ok(ceo)
+    }
+
+    /// The requesting team's decrypted provider keys, for the model
+    /// client to prefer over the platform keys. Empty when the team
+    /// has none stored, or the master key is not set.
+    pub fn provider_keys_for(&self, team_id: &str) -> HashMap<String, String> {
+        if team_id == DEFAULT_TENANT {
+            return HashMap::new();
+        }
+        self.platform.provider_keys(team_id)
     }
 }
 
@@ -376,15 +389,18 @@ async fn ask(
     let ceo = state.ceo_for(&tenant.tenant_id).map_err(bad_request)?;
     let request = body.request.clone();
     let tenant_id = tenant.tenant_id.clone();
+    let provider_keys = state.provider_keys_for(&tenant.tenant_id);
     let report = tokio::task::spawn_blocking(move || {
         crate::tenancy::with_tenant(&tenant_id, || {
-            ceo.handle(
-                &request,
-                Some(&history),
-                contract,
-                &needs_approval,
-                approved,
-            )
+            crate::models::with_request_provider_keys(&provider_keys, || {
+                ceo.handle(
+                    &request,
+                    Some(&history),
+                    contract,
+                    &needs_approval,
+                    approved,
+                )
+            })
         })
     })
     .await
@@ -412,17 +428,20 @@ async fn ask_agent(
     let request = body.request.clone();
     let ceo = state.ceo_for(&tenant.tenant_id).map_err(bad_request)?;
     let tenant_id = tenant.tenant_id.clone();
+    let provider_keys = state.provider_keys_for(&tenant.tenant_id);
     let result = tokio::task::spawn_blocking(move || {
         crate::tenancy::with_tenant(&tenant_id, || {
-            agent.run(
-                agent_task(&agent, &request, &history),
-                RunOpts {
-                    ledger: Some(ceo.ledger.clone()),
-                    run_id: Some(new_run_id()),
-                    store: ceo.run_store.clone(),
-                    ..Default::default()
-                },
-            )
+            crate::models::with_request_provider_keys(&provider_keys, || {
+                agent.run(
+                    agent_task(&agent, &request, &history),
+                    RunOpts {
+                        ledger: Some(ceo.ledger.clone()),
+                        run_id: Some(new_run_id()),
+                        store: ceo.run_store.clone(),
+                        ..Default::default()
+                    },
+                )
+            })
         })
     })
     .await
@@ -453,9 +472,12 @@ async fn team(
     let agents = body.agents.clone();
     let rounds = body.rounds;
     let tenant_id = tenant.tenant_id.clone();
+    let provider_keys = state.provider_keys_for(&tenant.tenant_id);
     let report = tokio::task::spawn_blocking(move || {
         crate::tenancy::with_tenant(&tenant_id, || {
-            ceo.team(&request, &agents, rounds, None, &[], false)
+            crate::models::with_request_provider_keys(&provider_keys, || {
+                ceo.team(&request, &agents, rounds, None, &[], false)
+            })
         })
     })
     .await
@@ -584,27 +606,30 @@ async fn ask_agent_stream(
     let request = query.request.clone();
     let ceo = state.ceo_for(&tenant.tenant_id).map_err(bad_request)?;
     let tenant_id = tenant.tenant_id.clone();
+    let provider_keys = state.provider_keys_for(&tenant.tenant_id);
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<(Option<String>, Value)>();
     tokio::task::spawn_blocking(move || {
         crate::tenancy::with_tenant(&tenant_id, || {
-            let sender = tx.clone();
-            let opts = RunOpts {
-                ledger: Some(ceo.ledger.clone()),
-                run_id: Some(new_run_id()),
-                store: ceo.run_store.clone(),
-                on_event: Some(Box::new(move |kind: &str, payload: Value| {
-                    let _ = sender.send((Some(kind.to_string()), payload));
-                })),
-                ..Default::default()
-            };
-            let task = agent_task(&agent, &request, &history);
-            let result = agent.run(task, opts);
-            record_usage(&tenant_id, &result);
-            let _ = tx.send((
-                "result".to_string().into(),
-                serde_json::to_value(&result).unwrap_or(Value::Null),
-            ));
-            let _ = tx.send(("done".to_string().into(), json!({})));
+            crate::models::with_request_provider_keys(&provider_keys, || {
+                let sender = tx.clone();
+                let opts = RunOpts {
+                    ledger: Some(ceo.ledger.clone()),
+                    run_id: Some(new_run_id()),
+                    store: ceo.run_store.clone(),
+                    on_event: Some(Box::new(move |kind: &str, payload: Value| {
+                        let _ = sender.send((Some(kind.to_string()), payload));
+                    })),
+                    ..Default::default()
+                };
+                let task = agent_task(&agent, &request, &history);
+                let result = agent.run(task, opts);
+                record_usage(&tenant_id, &result);
+                let _ = tx.send((
+                    "result".to_string().into(),
+                    serde_json::to_value(&result).unwrap_or(Value::Null),
+                ));
+                let _ = tx.send(("done".to_string().into(), json!({})));
+            })
         });
     });
     let stream = UnboundedReceiverStream::new(rx).map(|(kind, payload)| {
@@ -742,6 +767,60 @@ async fn revoke_api_key(
     Ok(Json(json!({"revoked": true})))
 }
 
+/// Body for POST /teams/provider-keys.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StoreProviderKeyRequest {
+    pub provider: String,
+    pub key: String,
+}
+
+async fn store_provider_key(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(body): Json<StoreProviderKeyRequest>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let team = auth_team(&state, &headers)?;
+    if crate::crypto::master_key().is_err() {
+        return Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(
+                json!({"detail": "provider keys need a platform master key: set BOTROPOLIS_MASTER_KEY on the server"}),
+            ),
+        ));
+    }
+    let provider = body.provider.trim().to_lowercase();
+    state
+        .platform
+        .store_provider_key(&team.id, &provider, &body.key)
+        .map_err(bad_request)?;
+    Ok(Json(json!({"provider": provider, "stored": true})))
+}
+
+async fn list_provider_keys(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let team = auth_team(&state, &headers)?;
+    let providers = state.platform.list_provider_keys(&team.id);
+    Ok(Json(json!({"providers": providers})))
+}
+
+async fn delete_provider_key(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(provider): Path<String>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let team = auth_team(&state, &headers)?;
+    let deleted = state
+        .platform
+        .delete_provider_key(&team.id, &provider)
+        .map_err(bad_request)?;
+    if !deleted {
+        return Err(not_found(format!("No stored key for provider: {provider}")));
+    }
+    Ok(Json(json!({"deleted": true})))
+}
+
 /// Build the router for one loaded state.
 pub fn build_app(state: Arc<AppState>) -> Router {
     let web_dir = crate::paths::web_dir();
@@ -761,6 +840,14 @@ pub fn build_app(state: Arc<AppState>) -> Router {
         .route("/signin", post(signin))
         .route("/teams/api-keys", post(create_api_key).get(list_api_keys))
         .route("/teams/api-keys/{id}", delete(revoke_api_key))
+        .route(
+            "/teams/provider-keys",
+            post(store_provider_key).get(list_provider_keys),
+        )
+        .route(
+            "/teams/provider-keys/{provider}",
+            delete(delete_provider_key),
+        )
         .nest_service("/static", ServeDir::new(web_dir))
         .with_state(state)
 }
