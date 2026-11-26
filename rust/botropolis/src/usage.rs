@@ -140,15 +140,33 @@ struct AgentTotals {
 /// Returns `{"agents": {name: {...}}, "totals": {...}}`. Reads never
 /// raise; a missing log just yields empty totals.
 pub fn get_summary_for(tenant_id: &str) -> Value {
-    get_summary_at(&usage_log_path_for(tenant_id))
+    get_summary_at(&usage_log_path_for(tenant_id), None)
+}
+
+/// Aggregate one tenant's usage log for the period starting at
+/// `since` (unix seconds) into per-agent totals.
+pub fn get_summary_for_period(tenant_id: &str, since: f64) -> Value {
+    get_summary_at(&usage_log_path_for(tenant_id), Some(since))
 }
 
 /// Aggregate the current tenant's usage log into per-agent totals.
 pub fn get_summary() -> Value {
-    get_summary_at(&usage_log_path())
+    get_summary_at(&usage_log_path(), None)
 }
 
-fn get_summary_at(path: &std::path::Path) -> Value {
+/// One tenant's totals since `since` (unix seconds): requests,
+/// tokens in plus out, and tool calls.
+pub fn period_totals(tenant_id: &str, since: f64) -> (u64, u64, u64) {
+    let summary = get_summary_for_period(tenant_id, since);
+    let totals = &summary["totals"];
+    (
+        totals["calls"].as_u64().unwrap_or(0),
+        totals["tokens_in"].as_u64().unwrap_or(0) + totals["tokens_out"].as_u64().unwrap_or(0),
+        totals["tool_calls"].as_u64().unwrap_or(0),
+    )
+}
+
+fn get_summary_at(path: &std::path::Path, since: Option<f64>) -> Value {
     let log_path = if let Ok(override_path) = env::var("BOTROPOLIS_USAGE_LOG") {
         if !override_path.is_empty() {
             PathBuf::from(override_path)
@@ -163,6 +181,8 @@ fn get_summary_at(path: &std::path::Path) -> Value {
     let mut successes = 0u64;
     let mut stub_calls = 0u64;
     let mut tool_calls_total = 0u64;
+    let mut tokens_in_total = 0u64;
+    let mut tokens_out_total = 0u64;
     if let Ok(text) = std::fs::read_to_string(&log_path) {
         for line in text.lines() {
             let line = line.trim();
@@ -173,6 +193,12 @@ fn get_summary_at(path: &std::path::Path) -> Value {
                 Ok(row) => row,
                 Err(_) => continue,
             };
+            if let Some(since) = since {
+                let ts = row.get("ts").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                if ts < since {
+                    continue;
+                }
+            }
             let name = row
                 .get("agent")
                 .and_then(|v| v.as_str())
@@ -186,6 +212,8 @@ fn get_summary_at(path: &std::path::Path) -> Value {
                 .unwrap_or(0.0);
             entry.tokens_in += row.get("tokens_in").and_then(|v| v.as_u64()).unwrap_or(0);
             entry.tokens_out += row.get("tokens_out").and_then(|v| v.as_u64()).unwrap_or(0);
+            tokens_in_total += row.get("tokens_in").and_then(|v| v.as_u64()).unwrap_or(0);
+            tokens_out_total += row.get("tokens_out").and_then(|v| v.as_u64()).unwrap_or(0);
             if row
                 .get("success")
                 .and_then(|v| v.as_bool())
@@ -253,6 +281,8 @@ fn get_summary_at(path: &std::path::Path) -> Value {
             "successes": successes,
             "stub_calls": stub_calls,
             "tool_calls": tool_calls_total,
+            "tokens_in": tokens_in_total,
+            "tokens_out": tokens_out_total,
             "log_path": log_path.to_string_lossy(),
         },
     })
@@ -314,6 +344,42 @@ mod tests {
         assert_eq!(summary["agents"]["coder"]["tokens_total"], json!(70));
         assert_eq!(summary["agents"]["scout"]["tools"]["calculator"], json!(1));
         std::env::remove_var("BOTROPOLIS_USAGE_LOG");
+    }
+
+    #[test]
+    fn period_totals_skip_older_rows() {
+        let _guard = lock_env();
+        let dir = tempfile::tempdir().unwrap();
+        std::env::set_var("BOTROPOLIS_DATA_DIR", dir.path());
+        std::env::remove_var("BOTROPOLIS_USAGE_LOG");
+        let log = usage_log_path_for("team-a");
+        std::fs::create_dir_all(log.parent().unwrap()).unwrap();
+        let old = serde_json::json!({"ts": 1_000_000.0, "tenant_id": "team-a", "agent": "scout", "department": "research", "model": "stub", "provider": "stub", "latency_ms": 1.0, "tokens_in": 100, "tokens_out": 50, "success": true, "tool_calls": 2, "tools": []});
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs_f64();
+        let mut fresh = old.clone();
+        fresh["ts"] = serde_json::json!(now);
+        fresh["tokens_in"] = serde_json::json!(5);
+        fresh["tokens_out"] = serde_json::json!(3);
+        fresh["tool_calls"] = serde_json::json!(1);
+        std::fs::write(
+            &log,
+            format!(
+                "{}\n{}\n",
+                serde_json::to_string(&old).unwrap(),
+                serde_json::to_string(&fresh).unwrap()
+            ),
+        )
+        .unwrap();
+        let (calls, tokens, tools) = period_totals("team-a", now - 60.0);
+        assert_eq!((calls, tokens, tools), (1, 8, 1));
+        let summary = get_summary_for_period("team-a", now - 60.0);
+        assert_eq!(summary["totals"]["calls"], json!(1));
+        let all = get_summary_for("team-a");
+        assert_eq!(all["totals"]["calls"], json!(2));
+        std::env::remove_var("BOTROPOLIS_DATA_DIR");
     }
 
     #[test]
