@@ -301,6 +301,36 @@ Every request is also appended to a local JSONL usage log
 (`botropolis/data/usage.jsonl`, gitignored) with a tool-call count, so
 the analytics tab works without any external service.
 
+## Hosting
+
+The Rust server runs as a hosted multi-tenant platform; the Python
+server stays single-user. The pieces:
+
+- **Tenancy.** `src/tenancy.rs` resolves a request to a team from
+  an `X-Botropolis-Key` header or a `botropolis_session` cookie,
+  matched by hash against the platform database. In hosted mode
+  (`BOTROPOLIS_HOSTED=1`, or `serve --hosted`) a request with no
+  credential gets 401; in single-tenant mode it falls back to the
+  default tenant, which keeps the old paths. The CEO, memory store,
+  usage log, and notebook are all scoped per tenant, and every
+  tenant's state lives under `botropolis/data/tenants/<team_id>/`.
+- **Accounts.** `src/platform.rs` holds teams, API keys, and
+  sessions in `botropolis/data/platform.db`. Passwords are argon2id
+  hashes; API keys and session tokens are stored only as SHA-256
+  hashes.
+- **BYOK.** `src/crypto.rs` encrypts stored provider keys with
+  AES-256-GCM under the master key from `BOTROPOLIS_MASTER_KEY`.
+  The model client (`src/models.rs`) uses the requesting team's
+  key first, then the platform environment key, then the offline
+  stub.
+- **Quotas.** `src/quotas.rs` meters each tenant per UTC calendar
+  month from its usage log. The free plan defaults to 1,000
+  requests and 1,000,000 tokens a month. Past the quota, `/ask`
+  and `/team` answer 402; reads keep working.
+
+The Docker image and deploy steps (Fly.io) are in `docs/hosting.md`.
+Billing, a team dashboard UI, and member invites are not built yet.
+
 ## Training
 
 `training/` is separate from the runtime on purpose. Datasets, configs,
