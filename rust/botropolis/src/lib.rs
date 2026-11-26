@@ -22,6 +22,7 @@ pub mod sandbox;
 pub mod schemas;
 pub mod server;
 pub mod taskmap;
+pub mod tenancy;
 pub mod tool_loop;
 pub mod tools;
 pub mod trace;

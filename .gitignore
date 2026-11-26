@@ -71,5 +71,8 @@ botropolis/data/runs/
 # Long-term memory database (local only, never committed)
 botropolis/data/memory.db
 
+# Per-tenant state (local only, never committed)
+botropolis/data/tenants/
+
 # Agent workspace (local only, never committed)
 botropolis/data/workspace/

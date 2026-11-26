@@ -371,7 +371,15 @@ fn civil_from_days(z: i64) -> (i64, u32, u32) {
 }
 
 /// The absolute path of the shared company notebook file.
+///
+/// In the server, the current thread's tenant decides: the default
+/// tenant keeps the workspace notebook, other tenants get their own
+/// file under `botropolis/data/tenants/<id>/notes.md`.
 pub fn notebook_path() -> std::path::PathBuf {
+    let tenant = crate::tenancy::current_tenant();
+    if tenant != crate::tenancy::DEFAULT_TENANT {
+        return crate::paths::tenant_notebook_path(&tenant);
+    }
     resolve_workspace_path(NOTES_FILE).unwrap_or_else(|_| workspace_root().join(NOTES_FILE))
 }
 
