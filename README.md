@@ -176,6 +176,54 @@ exact polynomial algebra, not a symbolic algebra system like the Python
 side's sympy tool, and it says so in its docs. Training stays Python:
 the `training/` pipeline has no Rust port.
 
+## Hosted
+
+The Rust server can run as a hosted multi-tenant platform: teams sign
+up, get API keys, bring their own provider keys, and get metered
+against a quota. The Python side has none of this; it stays the
+single-user reference implementation.
+
+**Multi-tenancy.** Each team gets isolated state under
+`botropolis/data/tenants/<team_id>/`: its own memory database, run
+ledger, run state, notebook, and usage log. One tenant cannot read
+another's. A request names its team with an `X-Botropolis-Key`
+header or a `botropolis_session` cookie from signin.
+
+**Auth.** `POST /signup` takes an email, password, and team name
+and returns a session token; `POST /signin` returns a fresh one.
+Passwords are stored as argon2id hashes. `POST /teams/api-keys`
+creates a key (shown once, only the hash is stored),
+`GET /teams/api-keys` lists metadata, and
+`DELETE /teams/api-keys/{id}` revokes one.
+
+**BYOK.** Teams store their own OpenAI, Anthropic, and Google keys
+with `POST /teams/provider-keys`. Keys are encrypted at rest with
+AES-256-GCM under a platform master key from `BOTROPOLIS_MASTER_KEY`;
+without the master key the endpoint refuses instead of storing
+plaintext. A run uses the team's key first, then the platform's
+environment key, then the offline stub.
+
+**Quotas.** Usage is metered per tenant per calendar month.
+`GET /teams/usage` returns the team's totals and quota standing.
+The free plan defaults to 1,000 requests and 1,000,000 tokens a
+month (changeable with `BOTROPOLIS_FREE_REQUESTS_PER_MONTH` and
+`BOTROPOLIS_FREE_TOKENS_PER_MONTH`). Past the quota, `/ask` and
+`/team` answer 402; reads keep working.
+
+Run it hosted locally:
+
+```bash
+cargo run -- serve --host 0.0.0.0 --port 8000 --hosted
+```
+
+Without `--hosted` the server runs single-tenant, exactly as
+before. The Docker image and full deploy steps (Fly.io) are in
+`docs/hosting.md`.
+
+**Not built yet:** billing (Stripe) is a later phase, so there is
+no way to charge a team today. There is also no team dashboard UI
+and no member invites.
+
 ## Web UI
 
 The same server also serves a web UI. No build step, no frameworks,
