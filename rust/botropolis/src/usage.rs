@@ -15,13 +15,34 @@ use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Where the usage log lives.
+///
+/// `BOTROPOLIS_USAGE_LOG` wins. Otherwise the current tenant's log:
+/// the default tenant keeps the old `botropolis/data/usage.jsonl`,
+/// other tenants get `botropolis/data/tenants/<id>/usage.jsonl`.
 pub fn usage_log_path() -> PathBuf {
     if let Ok(override_path) = env::var("BOTROPOLIS_USAGE_LOG") {
         if !override_path.is_empty() {
             return PathBuf::from(override_path);
         }
     }
-    crate::paths::data_dir().join("usage.jsonl")
+    usage_log_path_for(&crate::tenancy::current_tenant())
+}
+
+/// One tenant's usage log path.
+///
+/// `BOTROPOLIS_USAGE_LOG` wins over everything, so tests can point
+/// the log at one file regardless of tenant.
+pub fn usage_log_path_for(tenant_id: &str) -> PathBuf {
+    if let Ok(override_path) = env::var("BOTROPOLIS_USAGE_LOG") {
+        if !override_path.is_empty() {
+            return PathBuf::from(override_path);
+        }
+    }
+    if tenant_id == crate::tenancy::DEFAULT_TENANT {
+        crate::paths::data_dir().join("usage.jsonl")
+    } else {
+        crate::paths::tenant_usage_log_path(tenant_id)
+    }
 }
 
 fn now_secs() -> f64 {
@@ -31,12 +52,13 @@ fn now_secs() -> f64 {
         .unwrap_or(0.0)
 }
 
-/// Append one agent invocation to the usage log.
+/// Append one agent invocation to the usage log for a tenant.
 ///
 /// Never raises: analytics must not break the request path. Returns
 /// the row that was written (or would have been written).
 #[allow(clippy::too_many_arguments)]
-pub fn log_invocation(
+pub fn log_invocation_for(
+    tenant_id: &str,
     agent_name: &str,
     department: &str,
     model: &str,
@@ -50,6 +72,7 @@ pub fn log_invocation(
 ) -> Value {
     let row = json!({
         "ts": now_secs(),
+        "tenant_id": tenant_id,
         "agent": agent_name,
         "department": department,
         "model": model,
@@ -61,7 +84,7 @@ pub fn log_invocation(
         "tool_calls": tool_calls,
         "tools": tool_names,
     });
-    let path = usage_log_path();
+    let path = usage_log_path_for(tenant_id);
     if let Some(parent) = path.parent() {
         if !parent.as_os_str().is_empty() {
             let _ = std::fs::create_dir_all(parent);
@@ -78,6 +101,27 @@ pub fn log_invocation(
     row
 }
 
+/// Append one agent invocation to the current tenant's usage log.
+#[allow(clippy::too_many_arguments)]
+pub fn log_invocation(
+    agent_name: &str,
+    department: &str,
+    model: &str,
+    provider: &str,
+    latency_ms: f64,
+    tokens_in: u64,
+    tokens_out: u64,
+    success: bool,
+    tool_calls: usize,
+    tool_names: &[String],
+) -> Value {
+    let tenant_id = crate::tenancy::current_tenant();
+    log_invocation_for(
+        &tenant_id, agent_name, department, model, provider, latency_ms, tokens_in, tokens_out,
+        success, tool_calls, tool_names,
+    )
+}
+
 #[derive(Default)]
 struct AgentTotals {
     calls: u64,
@@ -91,17 +135,35 @@ struct AgentTotals {
     models: Vec<String>,
 }
 
-/// Aggregate the usage log into per-agent totals.
+/// Aggregate one tenant's usage log into per-agent totals.
 ///
 /// Returns `{"agents": {name: {...}}, "totals": {...}}`. Reads never
 /// raise; a missing log just yields empty totals.
+pub fn get_summary_for(tenant_id: &str) -> Value {
+    get_summary_at(&usage_log_path_for(tenant_id))
+}
+
+/// Aggregate the current tenant's usage log into per-agent totals.
 pub fn get_summary() -> Value {
+    get_summary_at(&usage_log_path())
+}
+
+fn get_summary_at(path: &std::path::Path) -> Value {
+    let log_path = if let Ok(override_path) = env::var("BOTROPOLIS_USAGE_LOG") {
+        if !override_path.is_empty() {
+            PathBuf::from(override_path)
+        } else {
+            path.to_path_buf()
+        }
+    } else {
+        path.to_path_buf()
+    };
     let mut per_agent: HashMap<String, AgentTotals> = HashMap::new();
     let mut calls = 0u64;
     let mut successes = 0u64;
     let mut stub_calls = 0u64;
     let mut tool_calls_total = 0u64;
-    if let Ok(text) = std::fs::read_to_string(usage_log_path()) {
+    if let Ok(text) = std::fs::read_to_string(&log_path) {
         for line in text.lines() {
             let line = line.trim();
             if line.is_empty() {
@@ -191,7 +253,7 @@ pub fn get_summary() -> Value {
             "successes": successes,
             "stub_calls": stub_calls,
             "tool_calls": tool_calls_total,
-            "log_path": usage_log_path().to_string_lossy(),
+            "log_path": log_path.to_string_lossy(),
         },
     })
 }
@@ -252,6 +314,33 @@ mod tests {
         assert_eq!(summary["agents"]["coder"]["tokens_total"], json!(70));
         assert_eq!(summary["agents"]["scout"]["tools"]["calculator"], json!(1));
         std::env::remove_var("BOTROPOLIS_USAGE_LOG");
+    }
+
+    #[test]
+    fn rows_carry_the_tenant_and_summaries_split_by_tenant() {
+        let _guard = lock_env();
+        let dir = tempfile::tempdir().unwrap();
+        std::env::set_var("BOTROPOLIS_DATA_DIR", dir.path());
+        let row = log_invocation_for(
+            "team-a",
+            "scout",
+            "research",
+            "stub",
+            "stub",
+            10.0,
+            5,
+            3,
+            true,
+            0,
+            &[],
+        );
+        assert_eq!(row["tenant_id"], json!("team-a"));
+        let summary_a = get_summary_for("team-a");
+        assert_eq!(summary_a["totals"]["calls"], json!(1));
+        assert_eq!(summary_a["agents"]["scout"]["tokens_total"], json!(8));
+        let summary_b = get_summary_for("team-b");
+        assert_eq!(summary_b["totals"]["calls"], json!(0));
+        std::env::remove_var("BOTROPOLIS_DATA_DIR");
     }
 
     #[test]

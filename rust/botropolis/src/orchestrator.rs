@@ -17,6 +17,7 @@ use crate::judge::{report_text, run_judge};
 use crate::ledger::Ledger;
 use crate::memory::MemoryStore;
 use crate::registry::AgentRegistry;
+use crate::runstate::RunStore;
 use crate::schemas::new_run_id;
 use crate::schemas::{
     AgentResult, CheckResult, CompanyReport, Context, Contract, Task, TeamReport, TeamRound,
@@ -270,6 +271,8 @@ pub struct CEO {
     pub registry: Arc<AgentRegistry>,
     pub ledger: Ledger,
     pub memory: Option<MemoryStore>,
+    /// Where resumable run state is written, when set.
+    pub run_store: Option<RunStore>,
 }
 
 impl CEO {
@@ -292,7 +295,38 @@ impl CEO {
             registry,
             ledger: ledger.unwrap_or_else(Ledger::in_memory),
             memory,
+            run_store: None,
         })
+    }
+
+    /// Build a CEO for one tenant, with that tenant's isolated
+    /// memory, ledger, and run state. The default tenant keeps the
+    /// old paths: the shared memory store, an in-memory ledger, and
+    /// the shared run state directory.
+    pub fn for_tenant(
+        registry: Option<Arc<AgentRegistry>>,
+        tenant_id: &str,
+    ) -> Result<Self, String> {
+        let registry = match registry {
+            Some(registry) => registry,
+            None => Arc::new(AgentRegistry::load().map_err(|e| e.to_string())?),
+        };
+        if tenant_id == crate::tenancy::DEFAULT_TENANT {
+            let mut ceo = CEO::new(
+                Some(Arc::clone(&registry)),
+                None,
+                Some(crate::memory::default_memory_store()),
+            )?;
+            ceo.run_store = Some(RunStore::new(None));
+            return Ok(ceo);
+        }
+        let memory = crate::memory::MemoryStore::open(crate::paths::tenant_memory_path(tenant_id))?;
+        let ledger = Ledger::open(crate::paths::tenant_ledger_path(tenant_id))?;
+        let mut ceo = CEO::new(Some(registry), Some(ledger), Some(memory))?;
+        ceo.run_store = Some(RunStore::new(Some(crate::paths::tenant_runs_dir(
+            tenant_id,
+        ))));
+        Ok(ceo)
     }
 
     fn record(&self, run_id: &str, kind: &str, payload: Value) {
@@ -508,11 +542,13 @@ impl CEO {
                 }
             };
             task.agent_name = Some(agent.name.clone());
+            let store = self.run_store.clone();
             let result = agent.run(
                 task,
                 RunOpts {
                     ledger: Some(self.ledger.clone()),
                     run_id: Some(run_id.clone()),
+                    store,
                     ..Default::default()
                 },
             );
@@ -612,11 +648,13 @@ impl CEO {
                 task.contract = contract.clone();
                 task.needs_approval = needs_approval.to_vec();
                 task.approved = approved;
+                let store = self.run_store.clone();
                 let result = agent.run(
                     task,
                     RunOpts {
                         ledger: Some(self.ledger.clone()),
                         run_id: Some(run_id.clone()),
+                        store,
                         ..Default::default()
                     },
                 );
@@ -823,6 +861,42 @@ mod tests {
         task.department = Some("research".to_string());
         let agent = ceo.assign(&task).unwrap();
         assert_eq!(agent.name, "scout");
+    }
+
+    #[test]
+    fn tenant_ceos_keep_memory_apart() {
+        let _guard = crate::test_support::lock_env();
+        let dir = tempfile::tempdir().unwrap();
+        std::env::set_var("BOTROPOLIS_DATA_DIR", dir.path());
+        let registry = Arc::new(AgentRegistry::load().unwrap());
+        let ceo_a = CEO::for_tenant(Some(Arc::clone(&registry)), "team-a").unwrap();
+        let ceo_b = CEO::for_tenant(Some(Arc::clone(&registry)), "team-b").unwrap();
+        let store_a = ceo_a.memory.as_ref().unwrap();
+        store_a
+            .save("Team A keeps its launch date secret", "scout", 5, &[])
+            .unwrap();
+        assert_eq!(store_a.count().unwrap(), 1);
+        let store_b = ceo_b.memory.as_ref().unwrap();
+        assert_eq!(store_b.count().unwrap(), 0);
+        assert!(store_b.recall("launch date secret", 5).unwrap().is_empty());
+        assert_eq!(store_a.recall("launch date secret", 5).unwrap().len(), 1);
+        assert!(dir
+            .path()
+            .join("tenants")
+            .join("team-a")
+            .join("memory.db")
+            .is_file());
+        assert!(dir
+            .path()
+            .join("tenants")
+            .join("team-b")
+            .join("ledger.db")
+            .is_file());
+        assert_eq!(
+            ceo_a.run_store.as_ref().unwrap().root,
+            dir.path().join("tenants").join("team-a").join("runs")
+        );
+        std::env::remove_var("BOTROPOLIS_DATA_DIR");
     }
 
     #[test]

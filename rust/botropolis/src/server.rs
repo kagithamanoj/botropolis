@@ -18,7 +18,7 @@
 
 use axum::{
     extract::{Path, Query, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     response::{
         sse::{Event, Sse},
         IntoResponse, Json,
@@ -28,8 +28,9 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use std::collections::HashMap;
 use std::convert::Infallible;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use tokio_stream::StreamExt;
 use tower_http::services::ServeDir;
@@ -38,28 +39,80 @@ use crate::agent::RunOpts;
 use crate::memory::{default_memory_store, set_memory_store};
 use crate::orchestrator::{history_context, ChatTurn, CEO, MAX_TEAM_ROUNDS};
 use crate::registry::AgentRegistry;
-use crate::schemas::{AgentResult, Contract, Task};
+use crate::schemas::{new_run_id, AgentResult, Contract, Task};
+use crate::tenancy::{hosted_mode, resolve_tenant, TenantContext, DEFAULT_TENANT};
 use crate::tools::builtin::notebook_path;
 use crate::tools::consult::set_consult_registry;
-use crate::usage::{get_summary, log_invocation};
+use crate::usage::{get_summary_for, log_invocation_for};
 
-/// Shared server state: the registry and the CEO that routes requests.
-#[derive(Debug, Clone)]
+/// Shared server state: the registry, the hosted flag, and one CEO
+/// per tenant, built lazily so each tenant gets its own memory,
+/// ledger, and run state.
+#[derive(Debug)]
 pub struct AppState {
     pub registry: Arc<AgentRegistry>,
-    pub ceo: CEO,
+    pub hosted: bool,
+    tenants: Mutex<HashMap<String, CEO>>,
 }
 
 impl AppState {
     /// Build the default state: load the registry, wire the shared
-    /// memory store and the consult registry, and build the CEO.
+    /// memory store and the consult registry. Hosted mode comes from
+    /// `BOTROPOLIS_HOSTED`.
     pub fn load() -> Result<Self, String> {
+        Self::load_with(hosted_mode())
+    }
+
+    /// Build state with an explicit hosted flag. Tests use this to
+    /// run the same app in hosted mode without touching env.
+    pub fn load_with(hosted: bool) -> Result<Self, String> {
         let registry = Arc::new(AgentRegistry::load().map_err(|e| e.to_string())?);
         let store = default_memory_store();
         set_memory_store(Some(store.clone()));
         set_consult_registry(Some(Arc::clone(&registry)));
-        let ceo = CEO::new(Some(Arc::clone(&registry)), None, Some(store))?;
-        Ok(AppState { registry, ceo })
+        Ok(AppState {
+            registry,
+            hosted,
+            tenants: Mutex::new(HashMap::new()),
+        })
+    }
+
+    /// The CEO for one tenant, built on first use and cached after.
+    pub fn ceo_for(&self, tenant_id: &str) -> Result<CEO, String> {
+        let mut tenants = self.tenants.lock().map_err(|e| e.to_string())?;
+        if let Some(ceo) = tenants.get(tenant_id) {
+            return Ok(ceo.clone());
+        }
+        let ceo = CEO::for_tenant(Some(Arc::clone(&self.registry)), tenant_id)?;
+        tenants.insert(tenant_id.to_string(), ceo.clone());
+        Ok(ceo)
+    }
+}
+
+/// Resolve the tenant for a request from its headers. In hosted
+/// mode a request with no tenant credential is rejected with 401;
+/// in single-tenant mode it falls back to the default tenant.
+fn tenant_from(
+    headers: &HeaderMap,
+    hosted: bool,
+) -> Result<TenantContext, (StatusCode, Json<Value>)> {
+    let api_key = headers
+        .get(crate::tenancy::TENANT_KEY_HEADER)
+        .and_then(|v| v.to_str().ok());
+    let cookie = headers
+        .get(axum::http::header::COOKIE)
+        .and_then(|v| v.to_str().ok());
+    resolve_tenant(api_key, cookie, &crate::tenancy::platform_db_path(), hosted)
+        .map_err(|e| (StatusCode::UNAUTHORIZED, Json(json!({"detail": e}))))
+}
+
+/// The tenant id for state reads that do not run agents: the
+/// notebook and the usage summary are per tenant.
+fn tenant_notebook_path(tenant_id: &str) -> std::path::PathBuf {
+    if tenant_id == DEFAULT_TENANT {
+        notebook_path()
+    } else {
+        crate::paths::tenant_notebook_path(tenant_id)
     }
 }
 
@@ -176,8 +229,8 @@ fn not_found(message: String) -> (StatusCode, Json<Value>) {
     (StatusCode::NOT_FOUND, Json(json!({"detail": message})))
 }
 
-/// Write one row to the usage log. Never raises.
-fn record_usage(result: &AgentResult) {
+/// Write one row to the tenant's usage log. Never raises.
+fn record_usage(tenant_id: &str, result: &AgentResult) {
     let meta = &result.metadata;
     let model = meta
         .get("model")
@@ -192,7 +245,8 @@ fn record_usage(result: &AgentResult) {
     let tokens_in = meta.get("tokens_in").and_then(|v| v.as_u64()).unwrap_or(0);
     let tokens_out = meta.get("tokens_out").and_then(|v| v.as_u64()).unwrap_or(0);
     let tool_names: Vec<String> = result.tool_calls.iter().map(|c| c.tool.clone()).collect();
-    log_invocation(
+    log_invocation_for(
+        tenant_id,
         &result.agent_name,
         &result.department,
         &model,
@@ -238,38 +292,45 @@ async fn index() -> impl IntoResponse {
 
 async fn ask(
     State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
     Json(body): Json<AskRequest>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let tenant = tenant_from(&headers, state.hosted)?;
     validate_ask(&body).map_err(bad_request)?;
     let history = body.history.clone();
     let contract = body.contract.as_ref().map(|c| c.to_contract());
     let needs_approval = body.needs_approval.clone();
     let approved = body.approved;
-    let ceo = state.ceo.clone();
+    let ceo = state.ceo_for(&tenant.tenant_id).map_err(bad_request)?;
     let request = body.request.clone();
+    let tenant_id = tenant.tenant_id.clone();
     let report = tokio::task::spawn_blocking(move || {
-        ceo.handle(
-            &request,
-            Some(&history),
-            contract,
-            &needs_approval,
-            approved,
-        )
+        crate::tenancy::with_tenant(&tenant_id, || {
+            ceo.handle(
+                &request,
+                Some(&history),
+                contract,
+                &needs_approval,
+                approved,
+            )
+        })
     })
     .await
     .map_err(|e| bad_request(format!("run failed: {e}")))?
     .map_err(bad_request)?;
     for result in &report.results {
-        record_usage(result);
+        record_usage(&tenant.tenant_id, result);
     }
     Ok(Json(serde_json::to_value(&report).unwrap_or(Value::Null)))
 }
 
 async fn ask_agent(
     State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
     Path(name): Path<String>,
     Json(body): Json<AskRequest>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let tenant = tenant_from(&headers, state.hosted)?;
     validate_ask(&body).map_err(bad_request)?;
     let agent = state
         .registry
@@ -277,19 +338,33 @@ async fn ask_agent(
         .map_err(|_| not_found(format!("Unknown agent: {name}")))?;
     let history = body.history.clone();
     let request = body.request.clone();
+    let ceo = state.ceo_for(&tenant.tenant_id).map_err(bad_request)?;
+    let tenant_id = tenant.tenant_id.clone();
     let result = tokio::task::spawn_blocking(move || {
-        agent.run(agent_task(&agent, &request, &history), RunOpts::default())
+        crate::tenancy::with_tenant(&tenant_id, || {
+            agent.run(
+                agent_task(&agent, &request, &history),
+                RunOpts {
+                    ledger: Some(ceo.ledger.clone()),
+                    run_id: Some(new_run_id()),
+                    store: ceo.run_store.clone(),
+                    ..Default::default()
+                },
+            )
+        })
     })
     .await
     .map_err(|e| bad_request(format!("run failed: {e}")))?;
-    record_usage(&result);
+    record_usage(&tenant.tenant_id, &result);
     Ok(Json(serde_json::to_value(&result).unwrap_or(Value::Null)))
 }
 
 async fn team(
     State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
     Json(body): Json<TeamRequest>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let tenant = tenant_from(&headers, state.hosted)?;
     if body.request.trim().is_empty() {
         return Err(bad_request("request must not be empty".to_string()));
     }
@@ -301,37 +376,49 @@ async fn team(
             "rounds must be between 1 and {MAX_TEAM_ROUNDS}"
         )));
     }
-    let ceo = state.ceo.clone();
+    let ceo = state.ceo_for(&tenant.tenant_id).map_err(bad_request)?;
     let request = body.request.clone();
     let agents = body.agents.clone();
     let rounds = body.rounds;
-    let report =
-        tokio::task::spawn_blocking(move || ceo.team(&request, &agents, rounds, None, &[], false))
-            .await
-            .map_err(|e| bad_request(format!("run failed: {e}")))?
-            .map_err(|e| {
-                if e.starts_with("Unknown agent") {
-                    not_found(e)
-                } else {
-                    bad_request(e)
-                }
-            })?;
+    let tenant_id = tenant.tenant_id.clone();
+    let report = tokio::task::spawn_blocking(move || {
+        crate::tenancy::with_tenant(&tenant_id, || {
+            ceo.team(&request, &agents, rounds, None, &[], false)
+        })
+    })
+    .await
+    .map_err(|e| bad_request(format!("run failed: {e}")))?
+    .map_err(|e| {
+        if e.starts_with("Unknown agent") {
+            not_found(e)
+        } else {
+            bad_request(e)
+        }
+    })?;
     for round in &report.rounds {
-        record_usage(&round.result);
+        record_usage(&tenant.tenant_id, &round.result);
     }
     Ok(Json(serde_json::to_value(&report).unwrap_or(Value::Null)))
 }
 
-async fn analytics() -> Json<Value> {
-    Json(get_summary())
+async fn analytics(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let tenant = tenant_from(&headers, state.hosted)?;
+    Ok(Json(get_summary_for(&tenant.tenant_id)))
 }
 
-async fn notebook() -> Json<Value> {
-    let content = std::fs::read_to_string(notebook_path())
+async fn notebook(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let tenant = tenant_from(&headers, state.hosted)?;
+    let content = std::fs::read_to_string(tenant_notebook_path(&tenant.tenant_id))
         .unwrap_or_default()
         .trim()
         .to_string();
-    Json(json!({"content": content}))
+    Ok(Json(json!({"content": content})))
 }
 
 async fn list_agents(State(state): State<Arc<AppState>>) -> Json<Value> {
@@ -406,12 +493,14 @@ fn parse_history_param(raw: &str) -> Vec<ChatTurn> {
 
 async fn ask_agent_stream(
     State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
     Path(name): Path<String>,
     Query(query): Query<StreamQuery>,
 ) -> Result<
     Sse<impl tokio_stream::Stream<Item = Result<Event, Infallible>>>,
     (StatusCode, Json<Value>),
 > {
+    let tenant = tenant_from(&headers, state.hosted)?;
     if query.request.trim().is_empty() {
         return Err(bad_request("request must not be empty".to_string()));
     }
@@ -421,23 +510,30 @@ async fn ask_agent_stream(
         .map_err(|_| not_found(format!("Unknown agent: {name}")))?;
     let history = parse_history_param(&query.history);
     let request = query.request.clone();
+    let ceo = state.ceo_for(&tenant.tenant_id).map_err(bad_request)?;
+    let tenant_id = tenant.tenant_id.clone();
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<(Option<String>, Value)>();
     tokio::task::spawn_blocking(move || {
-        let sender = tx.clone();
-        let opts = RunOpts {
-            on_event: Some(Box::new(move |kind: &str, payload: Value| {
-                let _ = sender.send((Some(kind.to_string()), payload));
-            })),
-            ..Default::default()
-        };
-        let task = agent_task(&agent, &request, &history);
-        let result = agent.run(task, opts);
-        record_usage(&result);
-        let _ = tx.send((
-            "result".to_string().into(),
-            serde_json::to_value(&result).unwrap_or(Value::Null),
-        ));
-        let _ = tx.send(("done".to_string().into(), json!({})));
+        crate::tenancy::with_tenant(&tenant_id, || {
+            let sender = tx.clone();
+            let opts = RunOpts {
+                ledger: Some(ceo.ledger.clone()),
+                run_id: Some(new_run_id()),
+                store: ceo.run_store.clone(),
+                on_event: Some(Box::new(move |kind: &str, payload: Value| {
+                    let _ = sender.send((Some(kind.to_string()), payload));
+                })),
+                ..Default::default()
+            };
+            let task = agent_task(&agent, &request, &history);
+            let result = agent.run(task, opts);
+            record_usage(&tenant_id, &result);
+            let _ = tx.send((
+                "result".to_string().into(),
+                serde_json::to_value(&result).unwrap_or(Value::Null),
+            ));
+            let _ = tx.send(("done".to_string().into(), json!({})));
+        });
     });
     let stream = UnboundedReceiverStream::new(rx).map(|(kind, payload)| {
         let kind = kind.unwrap_or_else(|| "done".to_string());
@@ -471,8 +567,15 @@ pub fn build_app(state: Arc<AppState>) -> Router {
 }
 
 /// Start the web server on 127.0.0.1:port. Blocks until it stops.
+/// Hosted mode comes from `BOTROPOLIS_HOSTED`.
 pub async fn serve(port: u16) -> Result<(), String> {
-    let state = Arc::new(AppState::load()?);
+    serve_hosted(port, crate::tenancy::hosted_mode()).await
+}
+
+/// Start the web server with an explicit hosted flag. In hosted
+/// mode, requests without a team key or session are rejected.
+pub async fn serve_hosted(port: u16, hosted: bool) -> Result<(), String> {
+    let state = Arc::new(AppState::load_with(hosted)?);
     let app = build_app(state);
     let listener = tokio::net::TcpListener::bind(("127.0.0.1", port))
         .await

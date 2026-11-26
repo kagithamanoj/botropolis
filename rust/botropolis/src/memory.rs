@@ -324,8 +324,9 @@ pub fn set_memory_store(store: Option<MemoryStore>) {
 
 /// The shared store, resolved at call time like the other
 /// `BOTROPOLIS_*` overrides: an explicit `BOTROPOLIS_MEMORY_DB` wins,
-/// then a pinned store, then the store at the default path (rebuilt
-/// when the path changes).
+/// then the current tenant's store (each tenant has its own memory
+/// database), then a pinned store, then the store at the default path
+/// (rebuilt when the path changes).
 pub fn get_memory_store() -> MemoryStore {
     if let Ok(override_path) = env::var("BOTROPOLIS_MEMORY_DB") {
         if !override_path.is_empty() {
@@ -345,6 +346,10 @@ pub fn get_memory_store() -> MemoryStore {
             }
         }
     }
+    let tenant = crate::tenancy::current_tenant();
+    if tenant != crate::tenancy::DEFAULT_TENANT {
+        return tenant_store(&tenant);
+    }
     if let Ok(slot) = pinned_slot().lock() {
         if let Some(store) = &*slot {
             return store.clone();
@@ -361,6 +366,29 @@ pub fn get_memory_store() -> MemoryStore {
         }
     }
     MemoryStore::in_memory()
+}
+
+/// One tenant's memory store, cached per thread so repeated
+/// recalls inside one request reuse the same connection.
+fn tenant_store(tenant_id: &str) -> MemoryStore {
+    use std::cell::RefCell;
+    thread_local! {
+        static SLOT: RefCell<Option<(String, MemoryStore)>> = const { RefCell::new(None) };
+    }
+    SLOT.with(|cell| {
+        let mut slot = cell.borrow_mut();
+        let same = slot
+            .as_ref()
+            .map(|(t, _)| t.as_str())
+            .map(|t| t == tenant_id)
+            .unwrap_or(false);
+        if !same {
+            let path = crate::paths::tenant_memory_path(tenant_id);
+            let store = MemoryStore::open(&path).unwrap_or_else(|_| MemoryStore::in_memory());
+            *slot = Some((tenant_id.to_string(), store));
+        }
+        slot.as_ref().unwrap().1.clone()
+    })
 }
 
 #[cfg(test)]
