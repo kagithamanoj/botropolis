@@ -10,6 +10,11 @@
 //!     GET  /analytics        Per-agent usage totals (calls, latency, tokens)
 //!     GET  /departments      List departments and their headcounts
 //!     GET  /health           Liveness check
+//!     POST /signup           Register a team, returns a session token
+//!     POST /signin           Sign in, returns a session token
+//!     POST /teams/api-keys   Create a team API key (shown once)
+//!     GET  /teams/api-keys   List a team's API keys (metadata only)
+//!     DELETE /teams/api-keys/{id} Revoke one of a team's API keys
 //!     GET  /                 Web UI (static files under /static)
 //!
 //! The web UI lives in botropolis/web/ and needs no build step. Agent
@@ -23,7 +28,7 @@ use axum::{
         sse::{Event, Sse},
         IntoResponse, Json,
     },
-    routing::{get, post},
+    routing::{delete, get, post},
     Router,
 };
 use serde::{Deserialize, Serialize};
@@ -38,27 +43,30 @@ use tower_http::services::ServeDir;
 use crate::agent::RunOpts;
 use crate::memory::{default_memory_store, set_memory_store};
 use crate::orchestrator::{history_context, ChatTurn, CEO, MAX_TEAM_ROUNDS};
+use crate::platform::{ApiKeyMeta, PlatformDb, Team, SESSION_TTL_SECS};
 use crate::registry::AgentRegistry;
 use crate::schemas::{new_run_id, AgentResult, Contract, Task};
-use crate::tenancy::{hosted_mode, resolve_tenant, TenantContext, DEFAULT_TENANT};
+use crate::tenancy::{cookie_value, hosted_mode, SESSION_COOKIE, TENANT_KEY_HEADER};
+use crate::tenancy::{TenantContext, DEFAULT_TENANT};
 use crate::tools::builtin::notebook_path;
 use crate::tools::consult::set_consult_registry;
 use crate::usage::{get_summary_for, log_invocation_for};
 
-/// Shared server state: the registry, the hosted flag, and one CEO
-/// per tenant, built lazily so each tenant gets its own memory,
-/// ledger, and run state.
+/// Shared server state: the registry, the hosted flag, the platform
+/// database, and one CEO per tenant, built lazily so each tenant
+/// gets its own memory, ledger, and run state.
 #[derive(Debug)]
 pub struct AppState {
     pub registry: Arc<AgentRegistry>,
     pub hosted: bool,
+    pub platform: PlatformDb,
     tenants: Mutex<HashMap<String, CEO>>,
 }
 
 impl AppState {
     /// Build the default state: load the registry, wire the shared
-    /// memory store and the consult registry. Hosted mode comes from
-    /// `BOTROPOLIS_HOSTED`.
+    /// memory store and the consult registry, and open the platform
+    /// database. Hosted mode comes from `BOTROPOLIS_HOSTED`.
     pub fn load() -> Result<Self, String> {
         Self::load_with(hosted_mode())
     }
@@ -70,9 +78,11 @@ impl AppState {
         let store = default_memory_store();
         set_memory_store(Some(store.clone()));
         set_consult_registry(Some(Arc::clone(&registry)));
+        let platform = PlatformDb::open_default()?;
         Ok(AppState {
             registry,
             hosted,
+            platform,
             tenants: Mutex::new(HashMap::new()),
         })
     }
@@ -89,21 +99,83 @@ impl AppState {
     }
 }
 
-/// Resolve the tenant for a request from its headers. In hosted
-/// mode a request with no tenant credential is rejected with 401;
-/// in single-tenant mode it falls back to the default tenant.
+/// Resolve the tenant for a request from its headers, through the
+/// platform database (so a successful key lookup also refreshes
+/// `last_used_at`). In hosted mode a request with no tenant
+/// credential is rejected with 401; in single-tenant mode it falls
+/// back to the default tenant.
 fn tenant_from(
+    state: &AppState,
     headers: &HeaderMap,
-    hosted: bool,
 ) -> Result<TenantContext, (StatusCode, Json<Value>)> {
     let api_key = headers
-        .get(crate::tenancy::TENANT_KEY_HEADER)
-        .and_then(|v| v.to_str().ok());
-    let cookie = headers
+        .get(TENANT_KEY_HEADER)
+        .and_then(|v| v.to_str().ok())
+        .map(str::trim)
+        .filter(|k| !k.is_empty());
+    if let Some(key) = api_key {
+        return match state.platform.team_from_key(key) {
+            Some(team) => Ok(TenantContext::team(&team.id)),
+            None => Err((
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"detail": "unknown or revoked team key"})),
+            )),
+        };
+    }
+    if let Some(cookie) = headers
         .get(axum::http::header::COOKIE)
-        .and_then(|v| v.to_str().ok());
-    resolve_tenant(api_key, cookie, &crate::tenancy::platform_db_path(), hosted)
-        .map_err(|e| (StatusCode::UNAUTHORIZED, Json(json!({"detail": e}))))
+        .and_then(|v| v.to_str().ok())
+    {
+        if let Some(token) = cookie_value(cookie, SESSION_COOKIE) {
+            if !token.is_empty() {
+                return match state.platform.team_from_session(&token) {
+                    Some(team) => Ok(TenantContext::team(&team.id)),
+                    None => Err((
+                        StatusCode::UNAUTHORIZED,
+                        Json(json!({"detail": "unknown or expired session"})),
+                    )),
+                };
+            }
+        }
+    }
+    if state.hosted {
+        return Err((
+            StatusCode::UNAUTHORIZED,
+            Json(json!({"detail": "a team key or session is required"})),
+        ));
+    }
+    Ok(TenantContext::default_tenant())
+}
+
+/// The signed-in team for a request: a session cookie first, then
+/// a team API key. Either proves the team.
+fn auth_team(state: &AppState, headers: &HeaderMap) -> Result<Team, (StatusCode, Json<Value>)> {
+    if let Some(cookie) = headers
+        .get(axum::http::header::COOKIE)
+        .and_then(|v| v.to_str().ok())
+    {
+        if let Some(token) = cookie_value(cookie, SESSION_COOKIE) {
+            if !token.is_empty() {
+                if let Some(team) = state.platform.team_from_session(&token) {
+                    return Ok(team);
+                }
+            }
+        }
+    }
+    if let Some(key) = headers
+        .get(TENANT_KEY_HEADER)
+        .and_then(|v| v.to_str().ok())
+        .map(str::trim)
+        .filter(|k| !k.is_empty())
+    {
+        if let Some(team) = state.platform.team_from_key(key) {
+            return Ok(team);
+        }
+    }
+    Err((
+        StatusCode::UNAUTHORIZED,
+        Json(json!({"detail": "a valid session or team key is required"})),
+    ))
 }
 
 /// The tenant id for state reads that do not run agents: the
@@ -295,7 +367,7 @@ async fn ask(
     headers: HeaderMap,
     Json(body): Json<AskRequest>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let tenant = tenant_from(&headers, state.hosted)?;
+    let tenant = tenant_from(&state, &headers)?;
     validate_ask(&body).map_err(bad_request)?;
     let history = body.history.clone();
     let contract = body.contract.as_ref().map(|c| c.to_contract());
@@ -330,7 +402,7 @@ async fn ask_agent(
     Path(name): Path<String>,
     Json(body): Json<AskRequest>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let tenant = tenant_from(&headers, state.hosted)?;
+    let tenant = tenant_from(&state, &headers)?;
     validate_ask(&body).map_err(bad_request)?;
     let agent = state
         .registry
@@ -364,7 +436,7 @@ async fn team(
     headers: HeaderMap,
     Json(body): Json<TeamRequest>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let tenant = tenant_from(&headers, state.hosted)?;
+    let tenant = tenant_from(&state, &headers)?;
     if body.request.trim().is_empty() {
         return Err(bad_request("request must not be empty".to_string()));
     }
@@ -405,7 +477,7 @@ async fn analytics(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let tenant = tenant_from(&headers, state.hosted)?;
+    let tenant = tenant_from(&state, &headers)?;
     Ok(Json(get_summary_for(&tenant.tenant_id)))
 }
 
@@ -413,7 +485,7 @@ async fn notebook(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let tenant = tenant_from(&headers, state.hosted)?;
+    let tenant = tenant_from(&state, &headers)?;
     let content = std::fs::read_to_string(tenant_notebook_path(&tenant.tenant_id))
         .unwrap_or_default()
         .trim()
@@ -500,7 +572,7 @@ async fn ask_agent_stream(
     Sse<impl tokio_stream::Stream<Item = Result<Event, Infallible>>>,
     (StatusCode, Json<Value>),
 > {
-    let tenant = tenant_from(&headers, state.hosted)?;
+    let tenant = tenant_from(&state, &headers)?;
     if query.request.trim().is_empty() {
         return Err(bad_request("request must not be empty".to_string()));
     }
@@ -547,6 +619,129 @@ async fn ask_agent_stream(
     ))
 }
 
+/// Body for POST /signup.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SignupRequest {
+    pub email: String,
+    pub password: String,
+    pub name: String,
+}
+
+/// Body for POST /signin.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SigninRequest {
+    pub email: String,
+    pub password: String,
+}
+
+/// Body for POST /teams/api-keys.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateApiKeyRequest {
+    #[serde(default)]
+    pub name: String,
+}
+
+/// A `Set-Cookie` header for a fresh session token. HttpOnly, so
+/// page scripts cannot read it.
+fn session_cookie(token: &str) -> (axum::http::HeaderName, axum::http::HeaderValue) {
+    let value = format!(
+        "{SESSION_COOKIE}={token}; HttpOnly; Path=/; SameSite=Lax; Max-Age={}",
+        SESSION_TTL_SECS as u64
+    );
+    (
+        axum::http::header::SET_COOKIE,
+        axum::http::HeaderValue::from_str(&value)
+            .unwrap_or_else(|_| axum::http::HeaderValue::from_static("")),
+    )
+}
+
+async fn signup(
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<SignupRequest>,
+) -> Result<(StatusCode, HeaderMap, Json<Value>), (StatusCode, Json<Value>)> {
+    let team = state
+        .platform
+        .create_team(&body.name, &body.email, &body.password)
+        .map_err(bad_request)?;
+    let token = state
+        .platform
+        .create_session(&team.id)
+        .map_err(bad_request)?;
+    let mut headers = HeaderMap::new();
+    let (name, value) = session_cookie(&token);
+    headers.insert(name, value);
+    Ok((
+        StatusCode::CREATED,
+        headers,
+        Json(json!({"team": team, "session_token": token})),
+    ))
+}
+
+async fn signin(
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<SigninRequest>,
+) -> Result<(StatusCode, HeaderMap, Json<Value>), (StatusCode, Json<Value>)> {
+    let team = state
+        .platform
+        .verify_signin(&body.email, &body.password)
+        .map_err(|e| (StatusCode::UNAUTHORIZED, Json(json!({"detail": e}))))?;
+    let token = state
+        .platform
+        .create_session(&team.id)
+        .map_err(bad_request)?;
+    let mut headers = HeaderMap::new();
+    let (name, value) = session_cookie(&token);
+    headers.insert(name, value);
+    Ok((
+        StatusCode::OK,
+        headers,
+        Json(json!({"team": team, "session_token": token})),
+    ))
+}
+
+async fn create_api_key(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(body): Json<CreateApiKeyRequest>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let team = auth_team(&state, &headers)?;
+    let (meta, key) = state
+        .platform
+        .create_api_key(&team.id, &body.name)
+        .map_err(bad_request)?;
+    Ok(Json(json!({
+        "id": meta.id,
+        "name": meta.name,
+        "key": key,
+        "created_at": meta.created_at,
+    })))
+}
+
+async fn list_api_keys(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let team = auth_team(&state, &headers)?;
+    let keys: Vec<ApiKeyMeta> = state.platform.list_api_keys(&team.id);
+    Ok(Json(json!({"api_keys": keys})))
+}
+
+async fn revoke_api_key(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(key_id): Path<String>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let team = auth_team(&state, &headers)?;
+    let revoked = state
+        .platform
+        .revoke_api_key(&team.id, &key_id)
+        .map_err(bad_request)?;
+    if !revoked {
+        return Err(not_found(format!("Unknown API key: {key_id}")));
+    }
+    Ok(Json(json!({"revoked": true})))
+}
+
 /// Build the router for one loaded state.
 pub fn build_app(state: Arc<AppState>) -> Router {
     let web_dir = crate::paths::web_dir();
@@ -562,6 +757,10 @@ pub fn build_app(state: Arc<AppState>) -> Router {
         .route("/analytics", get(analytics))
         .route("/notebook", get(notebook))
         .route("/departments", get(list_departments))
+        .route("/signup", post(signup))
+        .route("/signin", post(signin))
+        .route("/teams/api-keys", post(create_api_key).get(list_api_keys))
+        .route("/teams/api-keys/{id}", delete(revoke_api_key))
         .nest_service("/static", ServeDir::new(web_dir))
         .with_state(state)
 }

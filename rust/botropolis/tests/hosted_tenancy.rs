@@ -30,10 +30,19 @@ fn fixture(hosted: bool) -> (Fixture, axum::Router) {
     let data_dir = dir.path().join("data");
     std::fs::create_dir_all(&data_dir).unwrap();
     let db_path = dir.path().join("platform.db");
+    // Create the real schema through the platform module, then seed
+    // rows directly: the fixture needs keys for teams that were
+    // never signed up through the API.
+    drop(botropolis::platform::PlatformDb::open(&db_path).unwrap());
     let conn = rusqlite::Connection::open(&db_path).unwrap();
-    conn.execute_batch(
-        "CREATE TABLE api_keys (id TEXT PRIMARY KEY, team_id TEXT NOT NULL, key_hash TEXT NOT NULL, created_at REAL NOT NULL, revoked_at REAL);
-         CREATE TABLE sessions (id TEXT PRIMARY KEY, team_id TEXT NOT NULL, token_hash TEXT NOT NULL, created_at REAL NOT NULL, expires_at REAL NOT NULL);",
+    conn.execute(
+        "INSERT INTO teams (id, name, email, password_hash, plan, created_at) VALUES (?1, ?2, ?3, '', 'free', 0)",
+        rusqlite::params!["team-a", "Team A", "a@example.com"],
+    )
+    .unwrap();
+    conn.execute(
+        "INSERT INTO teams (id, name, email, password_hash, plan, created_at) VALUES (?1, ?2, ?3, '', 'free', 0)",
+        rusqlite::params!["team-b", "Team B", "b@example.com"],
     )
     .unwrap();
     conn.execute(
