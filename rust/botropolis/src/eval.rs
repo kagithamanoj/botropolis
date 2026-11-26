@@ -40,6 +40,11 @@
 //! the scenario's scripted client, so their replies come from the same
 //! `replies` queue, in call order.
 //!
+//! A scenario can flag tools that need human approval with
+//! `needs_approval` (a list of tool names). Those calls are blocked at
+//! the approval wall and never run; the scenario checks the blocked
+//! call like any other, with `success: false`.
+//!
 //! `env` values and file paths may use {tmp} (a fresh temp directory
 //! for the run) and {scenarios} (the bundled scenarios directory).
 //! Environment variables are restored when the run ends.
@@ -274,6 +279,16 @@ fn run_scenario_inner(
     let mut task = Task::new(scenario.get("task").and_then(|v| v.as_str()).unwrap_or(""));
     task.department = Some("research".to_string());
     task.agent_name = Some("EvalAgent".to_string());
+    task.needs_approval = scenario
+        .get("needs_approval")
+        .and_then(|v| v.as_array())
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                .collect()
+        })
+        .unwrap_or_default();
     let result = agent.run(task, Default::default());
 
     let mut details: Vec<String> = Vec::new();
@@ -335,6 +350,20 @@ fn run_scenario_inner(
                     ));
                 }
             }
+        }
+    }
+    for check in expect
+        .get("file_absent")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default()
+    {
+        let wanted = check.get("path").and_then(|v| v.as_str()).unwrap_or("");
+        let path = PathBuf::from(expand(wanted, tmp_dir));
+        if path.exists() {
+            details.push(format!(
+                "expected file {wanted:?} to be absent after the run"
+            ));
         }
     }
     Ok(details)
@@ -423,8 +452,69 @@ mod tests {
     }
 
     #[test]
+    fn needs_approval_blocks_tool_and_writes_nothing() {
+        let scenario = serde_json::json!({
+            "name": "approval-blocked",
+            "toolkit": ["job_apply"],
+            "needs_approval": ["job_apply"],
+            "env": {
+                "BOTROPOLIS_WORKSPACE": "{tmp}/workspace",
+                "BOTROPOLIS_APPLICATIONS_LOG": "{tmp}/applications.jsonl",
+            },
+            "setup_files": {"workspace/resume.txt": "Eval resume."},
+            "task": "Prepare an application.",
+            "replies": [
+                "ACTION: {\"tool\": \"job_apply\", \"args\": {\"title\": \"Dev\", \"company\": \"Acme Corp\", \"url\": \"https://example.com/jobs/1\", \"resume\": \"resume.txt\"}}",
+                "FINAL: {\"summary\": \"blocked: job_apply needs human approval\", \"details\": \"\", \"key_points\": []}",
+            ],
+            "expect": {
+                "output_contains": "needs human approval",
+                "tool_calls": [
+                    {"tool": "job_apply", "args": {"title": "Dev", "company": "Acme Corp", "url": "https://example.com/jobs/1", "resume": "resume.txt"}, "success": false}
+                ],
+                "file_absent": [{"path": "{tmp}/applications.jsonl"}],
+            },
+        });
+        let result = run_scenario(&scenario);
+        assert!(result.passed, "details: {:?}", result.details);
+    }
+
+    #[test]
+    fn file_absent_fails_when_file_exists() {
+        let scenario = serde_json::json!({
+            "name": "absent-check",
+            "toolkit": ["calculator"],
+            "task": "Do math.",
+            "setup_files": {"written.txt": "already here"},
+            "replies": [
+                "FINAL: {\"summary\": \"done\", \"details\": \"\", \"key_points\": []}",
+            ],
+            "expect": {
+                "output_contains": "done",
+                "file_absent": [{"path": "{tmp}/written.txt"}],
+            },
+        });
+        let result = run_scenario(&scenario);
+        assert!(!result.passed);
+        assert!(result.details.iter().any(|d| d.contains("absent")));
+    }
+
+    #[test]
     fn run_all_loads_bundled_scenarios() {
         let scenarios = load_scenarios(&scenarios_dir());
-        assert_eq!(scenarios.len(), 10);
+        assert_eq!(scenarios.len(), 15);
+        let names: Vec<&str> = scenarios
+            .iter()
+            .filter_map(|s| s.get("name").and_then(|v| v.as_str()))
+            .collect();
+        for want in [
+            "plan_first_then_act",
+            "check_revises_answer",
+            "same_error_escalates",
+            "malformed_action_recovers",
+            "approval_wall_blocks_apply",
+        ] {
+            assert!(names.contains(&want), "missing scenario {want}");
+        }
     }
 }
