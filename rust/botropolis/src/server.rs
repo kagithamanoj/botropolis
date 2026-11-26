@@ -18,6 +18,7 @@
 //!     POST /teams/provider-keys Store a team provider key (BYOK)
 //!     GET  /teams/provider-keys List stored provider key names only
 //!     DELETE /teams/provider-keys/{provider} Delete a stored key
+//!     GET  /teams/usage       A team's usage and quota for the period
 //!     GET  /                 Web UI (static files under /static)
 //!
 //! The web UI lives in botropolis/web/ and needs no build step. Agent
@@ -47,13 +48,14 @@ use crate::agent::RunOpts;
 use crate::memory::{default_memory_store, set_memory_store};
 use crate::orchestrator::{history_context, ChatTurn, CEO, MAX_TEAM_ROUNDS};
 use crate::platform::{ApiKeyMeta, PlatformDb, Team, SESSION_TTL_SECS};
+use crate::quotas::{quota_error, quota_status};
 use crate::registry::AgentRegistry;
 use crate::schemas::{new_run_id, AgentResult, Contract, Task};
 use crate::tenancy::{cookie_value, hosted_mode, SESSION_COOKIE, TENANT_KEY_HEADER};
 use crate::tenancy::{TenantContext, DEFAULT_TENANT};
 use crate::tools::builtin::notebook_path;
 use crate::tools::consult::set_consult_registry;
-use crate::usage::{get_summary_for, log_invocation_for};
+use crate::usage::{get_summary_for, get_summary_for_period, log_invocation_for};
 
 /// Shared server state: the registry, the hosted flag, the platform
 /// database, and one CEO per tenant, built lazily so each tenant
@@ -199,6 +201,23 @@ fn tenant_notebook_path(tenant_id: &str) -> std::path::PathBuf {
     } else {
         crate::paths::tenant_notebook_path(tenant_id)
     }
+}
+
+/// Reject a run when the tenant's team has used up its quota for
+/// the current month. The default tenant has no team, so local dev
+/// is never quota-limited. Reads are never blocked by this.
+fn check_quota(state: &AppState, tenant_id: &str) -> Result<(), (StatusCode, Json<Value>)> {
+    let Some(team) = state.platform.team_by_id(tenant_id) else {
+        return Ok(());
+    };
+    let status = quota_status(tenant_id, &team.plan);
+    if status.exceeded {
+        return Err((
+            StatusCode::PAYMENT_REQUIRED,
+            Json(json!({"detail": quota_error(&status), "quota": status})),
+        ));
+    }
+    Ok(())
 }
 
 /// One machine check on a contract: a shell command and the exit
@@ -382,6 +401,7 @@ async fn ask(
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
     let tenant = tenant_from(&state, &headers)?;
     validate_ask(&body).map_err(bad_request)?;
+    check_quota(&state, &tenant.tenant_id)?;
     let history = body.history.clone();
     let contract = body.contract.as_ref().map(|c| c.to_contract());
     let needs_approval = body.needs_approval.clone();
@@ -467,6 +487,7 @@ async fn team(
             "rounds must be between 1 and {MAX_TEAM_ROUNDS}"
         )));
     }
+    check_quota(&state, &tenant.tenant_id)?;
     let ceo = state.ceo_for(&tenant.tenant_id).map_err(bad_request)?;
     let request = body.request.clone();
     let agents = body.agents.clone();
@@ -821,6 +842,32 @@ async fn delete_provider_key(
     Ok(Json(json!({"deleted": true})))
 }
 
+/// A team's usage for the current period, with its quota standing.
+async fn team_usage(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let team = auth_team(&state, &headers)?;
+    let status = quota_status(&team.id, &team.plan);
+    let start = crate::quotas::period_start_secs(
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs_f64())
+            .unwrap_or(0.0),
+    );
+    let summary = get_summary_for_period(&team.id, start);
+    Ok(Json(json!({
+        "team_id": team.id,
+        "plan": team.plan,
+        "period": status.period,
+        "requests": status.requests_used,
+        "tokens": status.tokens_used,
+        "tool_calls": summary["totals"]["tool_calls"],
+        "agents": summary["agents"],
+        "quota": status,
+    })))
+}
+
 /// Build the router for one loaded state.
 pub fn build_app(state: Arc<AppState>) -> Router {
     let web_dir = crate::paths::web_dir();
@@ -848,6 +895,7 @@ pub fn build_app(state: Arc<AppState>) -> Router {
             "/teams/provider-keys/{provider}",
             delete(delete_provider_key),
         )
+        .route("/teams/usage", get(team_usage))
         .nest_service("/static", ServeDir::new(web_dir))
         .with_state(state)
 }

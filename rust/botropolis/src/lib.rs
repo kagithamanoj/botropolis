@@ -18,6 +18,7 @@ pub mod orchestrator;
 pub mod output_schemas;
 pub mod paths;
 pub mod platform;
+pub mod quotas;
 pub mod registry;
 pub mod runstate;
 pub mod sandbox;
