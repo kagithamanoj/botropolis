@@ -1,4 +1,4 @@
-.PHONY: install install-dev test demo serve clean
+.PHONY: install install-dev test eval demo serve clean
 
 install:
 	pip install -e .
@@ -8,6 +8,9 @@ install-dev:
 
 test:
 	python -m pytest -q
+
+eval:
+	python -m botropolis.eval.runner
 
 demo:
 	python examples/demo.py
