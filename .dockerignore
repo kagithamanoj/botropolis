@@ -1,0 +1,16 @@
+.git
+.github
+__pycache__
+*.pyc
+.pytest_cache
+.venv
+.venv-train
+venv
+rust/target
+botropolis/data
+checkpoints
+datasets
+*.egg-info
+.idea
+.vscode
+.DS_Store

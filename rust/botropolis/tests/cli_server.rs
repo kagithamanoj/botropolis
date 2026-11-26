@@ -108,6 +108,12 @@ fn resume_missing_run_fails() {
 }
 
 #[test]
+fn serve_help_lists_host_and_hosted_flags() {
+    use_stub();
+    assert_eq!(run_cli(argv(&["serve", "--help"])), 0);
+}
+
+#[test]
 fn notebook_reads() {
     use_stub();
     assert_eq!(run_cli(argv(&["notebook"])), 0);

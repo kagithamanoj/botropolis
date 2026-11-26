@@ -903,17 +903,17 @@ pub fn build_app(state: Arc<AppState>) -> Router {
 /// Start the web server on 127.0.0.1:port. Blocks until it stops.
 /// Hosted mode comes from `BOTROPOLIS_HOSTED`.
 pub async fn serve(port: u16) -> Result<(), String> {
-    serve_hosted(port, crate::tenancy::hosted_mode()).await
+    serve_hosted(port, "127.0.0.1", crate::tenancy::hosted_mode()).await
 }
 
-/// Start the web server with an explicit hosted flag. In hosted
-/// mode, requests without a team key or session are rejected.
-pub async fn serve_hosted(port: u16, hosted: bool) -> Result<(), String> {
+/// Start the web server with an explicit host and hosted flag. In
+/// hosted mode, requests without a team key or session are rejected.
+pub async fn serve_hosted(port: u16, host: &str, hosted: bool) -> Result<(), String> {
     let state = Arc::new(AppState::load_with(hosted)?);
     let app = build_app(state);
-    let listener = tokio::net::TcpListener::bind(("127.0.0.1", port))
+    let listener = tokio::net::TcpListener::bind((host, port))
         .await
         .map_err(|e| e.to_string())?;
-    println!("Botropolis serving on http://127.0.0.1:{port}");
+    println!("Botropolis serving on http://{host}:{port}");
     axum::serve(listener, app).await.map_err(|e| e.to_string())
 }
