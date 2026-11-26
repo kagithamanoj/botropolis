@@ -1,0 +1,15 @@
+name: malformed_action_recovers
+description: The agent's first action line is broken JSON. The loop tells it plainly, the agent fixes the line, and the run finishes.
+toolkit: [calculator]
+task: What is 6 times 7?
+replies:
+  - 'ACTION: {"tool": "calculator", "args": {"expression": "6 * 7"'
+  - 'ACTION: {"tool": "calculator", "args": {"expression": "6 * 7"}}'
+  - "FINAL: {\"summary\": \"6 times 7 is 42.\", \"details\": \"My first action line was broken JSON; the loop told me, and I sent a fixed line.\", \"key_points\": [\"6 times 7 is 42\"]}"
+expect:
+  output_contains: "42"
+  tool_call_count: 1
+  tool_calls:
+    - tool: calculator
+      args: {expression: "6 * 7"}
+      success: true

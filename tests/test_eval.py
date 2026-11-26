@@ -63,7 +63,15 @@ def test_missing_name_still_runs():
 
 def test_run_all_loads_bundled_scenarios():
     results = run_all(Path(runner.__file__).resolve().parent / "scenarios")
-    assert len(results) >= 3
+    assert len(results) == 15
+    names = {r.name for r in results}
+    assert {
+        "plan_first_then_act",
+        "check_revises_answer",
+        "same_error_escalates",
+        "malformed_action_recovers",
+        "approval_wall_blocks_apply",
+    } <= names
     assert all(r.passed for r in results), [
         (r.name, r.details) for r in results if not r.passed
     ]
@@ -102,3 +110,79 @@ def test_scenario_file_contains_missing_file_fails():
     result = run_scenario(scenario)
     assert result.passed is False
     assert any("never_written" in d for d in result.details)
+
+
+def test_scenario_needs_approval_blocks_tool_and_writes_nothing():
+    scenario = _scenario(
+        toolkit=["job_apply"],
+        needs_approval=["job_apply"],
+        env={
+            "BOTROPOLIS_WORKSPACE": "{tmp}/workspace",
+            "BOTROPOLIS_APPLICATIONS_LOG": "{tmp}/applications.jsonl",
+        },
+        setup_files={"workspace/resume.txt": "Eval resume."},
+        replies=[
+            'ACTION: {"tool": "job_apply", "args": {"title": "Dev", "company": "Acme Corp", "url": "https://example.com/jobs/1", "resume": "resume.txt"}}',
+            'FINAL: {"summary": "blocked: job_apply needs human approval", "details": "", "key_points": []}',
+        ],
+        expect={
+            "output_contains": "needs human approval",
+            "tool_calls": [
+                {
+                    "tool": "job_apply",
+                    "args": {
+                        "title": "Dev",
+                        "company": "Acme Corp",
+                        "url": "https://example.com/jobs/1",
+                        "resume": "resume.txt",
+                    },
+                    "success": False,
+                }
+            ],
+            "file_absent": [{"path": "{tmp}/applications.jsonl"}],
+        },
+    )
+    result = run_scenario(scenario)
+    assert result.passed is True, result.details
+
+
+def test_scenario_file_absent_fails_when_file_exists():
+    scenario = _scenario(
+        setup_files={"written.txt": "already here"},
+        expect={
+            "output_contains": "done",
+            "file_absent": [{"path": "{tmp}/written.txt"}],
+        },
+    )
+    result = run_scenario(scenario)
+    assert result.passed is False
+    assert any("absent" in d for d in result.details)
+
+
+def test_scenario_same_error_twice_escalates():
+    scenario = _scenario(
+        replies=[
+            'ACTION: {"tool": "calculator", "args": {"expression": "100 / (5 - 5)"}}',
+            'ACTION: {"tool": "calculator", "args": {"expression": "100 / (5 - 5)"}}',
+        ],
+        expect={
+            "output_contains": "failed twice in a row",
+            "success": False,
+            "tool_call_count": 2,
+        },
+    )
+    result = run_scenario(scenario)
+    assert result.passed is True, result.details
+
+
+def test_scenario_check_pass_can_revise_the_answer():
+    scenario = _scenario(
+        toolkit=["calculator"],
+        replies=[
+            'FINAL: {"summary": "6 times 7 is 43.", "details": "", "key_points": []}',
+            'FINAL: {"summary": "6 times 7 is 42.", "details": "", "key_points": []}',
+        ],
+        expect={"output_equals": "6 times 7 is 42."},
+    )
+    result = run_scenario(scenario)
+    assert result.passed is True, result.details

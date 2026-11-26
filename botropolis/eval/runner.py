@@ -36,6 +36,11 @@ to a scratch agents directory and registered for the run; they share
 the scenario's scripted client, so their replies come from the same
 `replies` queue, in call order.
 
+A scenario can flag tools that need human approval with
+`needs_approval` (a list of tool names). Those calls are blocked at
+the approval wall and never run; the scenario checks the blocked
+call like any other, with `success: false`.
+
 `env` values and file paths may use {tmp} (a fresh temp directory for
 the run) and {scenarios} (the bundled scenarios directory). Environment
 variables are restored when the run ends.
@@ -179,6 +184,7 @@ def run_scenario(scenario: Dict[str, Any]) -> EvalResult:
                         description=scenario.get("task", ""),
                         department="research",
                         agent_name="EvalAgent",
+                        needs_approval=scenario.get("needs_approval") or [],
                     )
                 )
             except Exception as exc:  # noqa: BLE001 - evals must not crash the runner
@@ -223,6 +229,15 @@ def run_scenario(scenario: Dict[str, Any]) -> EvalResult:
                 if needle not in content:
                     details.append(
                         f"file {check.get('path')} does not contain {needle!r}"
+                    )
+            for check in expect.get("file_absent") or []:
+                wanted = (
+                    check.get("path", "") if isinstance(check, dict) else check
+                )
+                path = Path(_expand(wanted, tmp_dir))
+                if path.exists():
+                    details.append(
+                        f"expected file {wanted} to be absent after the run"
                     )
 
             return EvalResult(name=name, passed=not details, details=details)

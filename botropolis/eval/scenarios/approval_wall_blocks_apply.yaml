@@ -1,0 +1,22 @@
+name: approval_wall_blocks_apply
+description: The task flags job_apply as needing human approval and the run is not approved. The call is blocked, nothing is written to the applications log, and the agent says plainly why it did not apply.
+toolkit: [job_apply]
+needs_approval: [job_apply]
+env:
+  BOTROPOLIS_APPLICATIONS_LOG: "{tmp}/applications.jsonl"
+  BOTROPOLIS_WORKSPACE: "{tmp}/workspace"
+setup_files:
+  workspace/resume.txt: "Eval resume. Python engineer, ten years of backend work."
+task: Prepare an application to Senior Python Engineer at Acme Corp using resume.txt.
+replies:
+  - 'ACTION: {"tool": "job_apply", "args": {"title": "Senior Python Engineer", "company": "Acme Corp", "url": "https://remoteok.com/remote-jobs/101", "resume": "resume.txt"}}'
+  - "FINAL: {\"summary\": \"I did not apply. job_apply needs human approval and this run is not approved, so the call was blocked.\", \"details\": \"The approval wall stopped the call before it ran; nothing was written to the applications log.\", \"key_points\": [\"job_apply blocked: needs approval\"]}"
+expect:
+  output_contains: "needs human approval"
+  tool_call_count: 1
+  tool_calls:
+    - tool: job_apply
+      args: {title: "Senior Python Engineer", company: "Acme Corp", url: "https://remoteok.com/remote-jobs/101", resume: "resume.txt"}
+      success: false
+  file_absent:
+    - path: "{tmp}/applications.jsonl"
