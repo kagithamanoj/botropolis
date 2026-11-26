@@ -387,17 +387,22 @@ python -m botropolis.eval.runner
 
 ```
 [PASS] ambiguous_request_asks_first
+[PASS] approval_wall_blocks_apply
 [PASS] calculator_two_step
+[PASS] check_revises_answer
 [PASS] conflicting_sources_surfaced
 [PASS] consult_specialist
 [PASS] job_search_and_apply
+[PASS] malformed_action_recovers
 [PASS] math_multi_step
 [PASS] memory_save_and_recall
 [PASS] plain_answer_no_tools
+[PASS] plan_first_then_act
+[PASS] same_error_escalates
 [PASS] tool_failure_adapts
 [PASS] unknown_tool_is_refused
 
-10/10 scenarios passed
+15/15 scenarios passed
 ```
 
 Scenarios run with no model credentials and no network: the runner
@@ -405,7 +410,11 @@ plays the replies through a real Agent and checks the outcome. Alongside
 the tool-use basics, the set covers the hard cases: an ambiguous request
 that should be questioned rather than invented, two sources that
 conflict and must be reported as a conflict, a tool failure mid-task
-that the agent has to adapt to, and a consult with a specialist. Add a
+that the agent has to adapt to, and a consult with a specialist. It
+also covers the loop's own habits: a plan first, the check pass fixing
+a wrong answer, the same error twice escalating the run, a broken
+action line the agent recovers from, and the approval wall blocking a
+tool that needs a human. Add a
 new file under `botropolis/eval/scenarios/` to cover a behavior you
 care about. A failing scenario exits non-zero with the mismatch
 spelled out.

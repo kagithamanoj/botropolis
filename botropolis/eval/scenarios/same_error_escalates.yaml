@@ -1,0 +1,18 @@
+name: same_error_escalates
+description: The agent retries the same failing division twice in a row. The loop escalates instead of burning more steps on a failure it already saw.
+toolkit: [calculator]
+task: What is 100 divided by (5 minus 5)?
+replies:
+  - 'ACTION: {"tool": "calculator", "args": {"expression": "100 / (5 - 5)"}}'
+  - 'ACTION: {"tool": "calculator", "args": {"expression": "100 / (5 - 5)"}}'
+expect:
+  output_contains: "failed twice in a row"
+  success: false
+  tool_call_count: 2
+  tool_calls:
+    - tool: calculator
+      args: {expression: "100 / (5 - 5)"}
+      success: false
+    - tool: calculator
+      args: {expression: "100 / (5 - 5)"}
+      success: false

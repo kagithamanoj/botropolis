@@ -1,0 +1,15 @@
+name: plan_first_then_act
+description: The agent plans first, then carries out the plan with the calculator and answers. A plan at the start of a run must not break the run.
+toolkit: [calculator]
+task: What is 6 times 7? Plan first, then work the plan.
+replies:
+  - "PLAN: 1. Multiply 6 by 7 with the calculator.\n2. Report the answer."
+  - 'ACTION: {"tool": "calculator", "args": {"expression": "6 * 7"}}'
+  - "FINAL: {\"summary\": \"6 times 7 is 42.\", \"details\": \"I planned first, then multiplied 6 by 7 with the calculator.\", \"key_points\": [\"6 times 7 is 42\"]}"
+expect:
+  output_contains: "42"
+  tool_call_count: 1
+  tool_calls:
+    - tool: calculator
+      args: {expression: "6 * 7"}
+      success: true
