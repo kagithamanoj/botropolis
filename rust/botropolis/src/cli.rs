@@ -92,6 +92,10 @@ enum Commands {
         /// Port to listen on.
         #[arg(long, default_value_t = 8000)]
         port: u16,
+        /// Interface to listen on (default 127.0.0.1; use 0.0.0.0
+        /// in a container).
+        #[arg(long, default_value = "127.0.0.1")]
+        host: String,
         /// Hosted mode: reject requests with no team key or session.
         #[arg(long)]
         hosted: bool,
@@ -363,7 +367,7 @@ fn cmd_evals(directory: Option<String>) -> i32 {
     run_evals(directory.as_deref().map(std::path::Path::new))
 }
 
-fn cmd_serve(port: u16, hosted: bool) -> i32 {
+fn cmd_serve(port: u16, host: String, hosted: bool) -> i32 {
     let runtime = match tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
@@ -374,7 +378,7 @@ fn cmd_serve(port: u16, hosted: bool) -> i32 {
             return 1;
         }
     };
-    match runtime.block_on(crate::server::serve_hosted(port, hosted)) {
+    match runtime.block_on(crate::server::serve_hosted(port, &host, hosted)) {
         Ok(()) => 0,
         Err(e) => {
             eprintln!("Server stopped: {e}");
@@ -422,7 +426,7 @@ pub fn run(argv: Vec<String>) -> i32 {
         Commands::Map { run_id } => cmd_map(run_id),
         Commands::Trace { run_id, json } => cmd_trace(run_id, json),
         Commands::Evals { directory } => cmd_evals(directory),
-        Commands::Serve { port, hosted } => cmd_serve(port, hosted),
+        Commands::Serve { port, host, hosted } => cmd_serve(port, host, hosted),
         Commands::Notebook => cmd_notebook(),
     }
 }
