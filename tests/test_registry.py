@@ -16,6 +16,7 @@ EXPECTED_DEPARTMENTS = {
     "ops",
     "security",
     "support",
+    "sales",
 }
 
 EXPECTED_COUNTS = {
@@ -29,6 +30,7 @@ EXPECTED_COUNTS = {
     "ops": 2,
     "security": 1,
     "support": 1,
+    "sales": 2,
 }
 
 
@@ -37,8 +39,8 @@ def registry():
     return AgentRegistry()
 
 
-def test_all_twenty_specs_load(registry):
-    assert len(registry) == 20
+def test_all_twenty_two_specs_load(registry):
+    assert len(registry) == 22
 
 
 def test_departments_match(registry):

@@ -20,13 +20,14 @@ fn expected_counts() -> Vec<(&'static str, usize)> {
         ("ops", 2),
         ("security", 1),
         ("support", 1),
+        ("sales", 2),
     ]
 }
 
 #[test]
-fn all_twenty_specs_load() {
+fn all_twenty_two_specs_load() {
     let registry = AgentRegistry::load().unwrap();
-    assert_eq!(registry.len(), 20);
+    assert_eq!(registry.len(), 22);
 }
 
 #[test]
@@ -42,6 +43,7 @@ fn departments_match() {
         "marketing",
         "ops",
         "research",
+        "sales",
         "security",
         "support",
     ]

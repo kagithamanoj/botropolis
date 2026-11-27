@@ -149,13 +149,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn bundled_registry_has_twenty_agents() {
+    fn bundled_registry_has_twenty_two_agents() {
         let registry = AgentRegistry::load().unwrap();
-        assert_eq!(registry.len(), 20);
-        assert_eq!(registry.departments().len(), 10);
+        assert_eq!(registry.len(), 22);
+        assert_eq!(registry.departments().len(), 11);
         assert_eq!(registry.by_department("research").len(), 3);
         assert_eq!(registry.by_department("code").len(), 3);
         assert_eq!(registry.by_department("legal").len(), 1);
+        assert_eq!(registry.by_department("sales").len(), 2);
     }
 
     #[test]

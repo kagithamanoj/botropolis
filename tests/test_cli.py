@@ -5,12 +5,12 @@ import pytest
 from botropolis.cli import build_parser, main
 
 
-def test_roster_lists_all_twenty(capsys):
+def test_roster_lists_all_twenty_two(capsys):
     assert main(["roster"]) == 0
     out = capsys.readouterr().out
     assert "coder" in out
     assert "Inbox" in out
-    assert len(out.strip().splitlines()) == 20
+    assert len(out.strip().splitlines()) == 22
 
 
 def test_roster_filters_by_department(capsys):

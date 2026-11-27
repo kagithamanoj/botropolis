@@ -71,6 +71,10 @@ DEPARTMENT_KEYWORDS: Dict[str, Tuple[str, ...]] = {
         "support", "help me with", "customer", "ticket", "complaint",
         "troubleshoot",
     ),
+    "sales": (
+        "sales", "prospect", "cold email", "outreach", "deal", "proposal",
+        "discount", "negotiat", "quota", "follow-up",
+    ),
 }
 
 # Preferred agent per department for whole-request routing.
@@ -85,6 +89,7 @@ LEAD_AGENT: Dict[str, str] = {
     "ops": "scheduler",
     "security": "auditor",
     "support": "support",
+    "sales": "outreach",
 }
 
 # Hard ceiling on team collaboration rounds. Each round runs every agent,

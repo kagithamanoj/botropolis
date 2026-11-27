@@ -22,6 +22,18 @@ def test_code_question_goes_to_code(ceo):
     assert "code" in report.departments_involved
 
 
+def test_sales_question_goes_to_sales(ceo):
+    report = ceo.handle("Draft a cold email to a prospect about our product")
+    assert "sales" in report.departments_involved
+    assert report.results
+
+
+def test_sales_keywords_score_sales_first(ceo):
+    scored = ceo.score_departments("Close the deal with a discount in the proposal")
+    assert scored
+    assert scored[0][0] == "sales"
+
+
 def test_report_contains_agent_results(ceo):
     report = ceo.handle("Explain how compound interest works")
     assert len(report.results) >= 1

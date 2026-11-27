@@ -5,9 +5,9 @@ New hires welcome. Here is the full process, start to finish.
 ## 1. Pick a department
 
 Look at `botropolis/agents/` and find the closest fit: research, health,
-finance, code, data, legal, marketing, ops, security, support. If nothing
-fits, create a new directory. It becomes a department automatically, the
-registry discovers `agents/*/*.yaml`.
+finance, code, data, legal, marketing, ops, security, support, sales. If
+nothing fits, create a new directory. It becomes a department
+automatically, the registry discovers `agents/*/*.yaml`.
 
 ## 2. Write the spec
 

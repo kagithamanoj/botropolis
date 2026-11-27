@@ -33,8 +33,8 @@ pub const REQUIRED_SPEC_FIELDS: [&str; 6] = [
     "system_prompt",
 ];
 
-/// The ten departments in the org chart.
-pub const KNOWN_DEPARTMENTS: [&str; 10] = [
+/// The eleven departments in the org chart.
+pub const KNOWN_DEPARTMENTS: [&str; 11] = [
     "research",
     "health",
     "finance",
@@ -45,6 +45,7 @@ pub const KNOWN_DEPARTMENTS: [&str; 10] = [
     "ops",
     "security",
     "support",
+    "sales",
 ];
 
 #[derive(Debug, Error)]
