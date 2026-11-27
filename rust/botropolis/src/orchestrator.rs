@@ -154,6 +154,21 @@ pub const DEPARTMENT_KEYWORDS: &[(&str, &[&str])] = &[
             "troubleshoot",
         ],
     ),
+    (
+        "sales",
+        &[
+            "sales",
+            "prospect",
+            "cold email",
+            "outreach",
+            "deal",
+            "proposal",
+            "discount",
+            "negotiat",
+            "quota",
+            "follow-up",
+        ],
+    ),
 ];
 
 /// Preferred agent per department for whole-request routing.
@@ -168,6 +183,7 @@ pub const LEAD_AGENT: &[(&str, &str)] = &[
     ("ops", "scheduler"),
     ("security", "auditor"),
     ("support", "support"),
+    ("sales", "outreach"),
 ];
 
 /// Hard ceiling on team collaboration rounds. Each round runs every
@@ -815,6 +831,20 @@ mod tests {
         let tasks = ceo.plan("research the history of the abacus", None, None, &[], false);
         assert_eq!(tasks.len(), 1);
         assert_eq!(tasks[0].department.as_deref(), Some("research"));
+    }
+
+    #[test]
+    fn sales_question_goes_to_sales() {
+        let ceo = test_ceo();
+        let tasks = ceo.plan(
+            "draft a cold email to a prospect about our product",
+            None,
+            None,
+            &[],
+            false,
+        );
+        assert!(!tasks.is_empty());
+        assert_eq!(tasks[0].department.as_deref(), Some("sales"));
     }
 
     #[test]

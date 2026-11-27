@@ -7,10 +7,10 @@
 [![GitHub stars](https://img.shields.io/github/stars/kagithamanoj/botropolis.svg)](https://github.com/kagithamanoj/botropolis/stargazers)
 
 Most agent frameworks hand you a pile of scripts and wish you luck.
-Botropolis hands you an org chart. Twenty specialist agents across ten
-departments, one CEO orchestrator who breaks your request into pieces and
-routes the work, and a training pipeline so each agent can eventually get
-its own fine-tuned model.
+Botropolis hands you an org chart. Twenty-two specialist agents across
+eleven departments, one CEO orchestrator who breaks your request into
+pieces and routes the work, and a training pipeline so each agent can
+eventually get its own fine-tuned model.
 
 It runs with no API keys. It serves a web UI from the same process. And
 every agent calls real tools through a plain-text protocol that works with
@@ -83,8 +83,8 @@ give guidance and summaries, not diagnoses or legal advice.
 [draw.io](https://app.diagrams.net). Each page numbers every step and explains
 what happens at each point:
 
-1. System overview: entry points, the FastAPI server, CEO Manoj, all 10
-   departments and 20 agents, model providers, and the side systems (model
+1. System overview: entry points, the FastAPI server, CEO Manoj, all 11
+   departments and 22 agents, model providers, and the side systems (model
    registry, training pipeline, usage analytics, tool sandbox).
 2. Request lifecycle: what happens step by step when `POST /ask` arrives,
    including the ReAct think-act-observe loop and its safety rails.

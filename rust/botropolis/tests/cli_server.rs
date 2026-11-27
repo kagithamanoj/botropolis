@@ -157,7 +157,7 @@ async fn health_reports_agent_count() {
     let (status, body) = get_json("/health").await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body["status"], json!("ok"));
-    assert_eq!(body["agents"], json!(20));
+    assert_eq!(body["agents"], json!(22));
 }
 
 #[tokio::test]
@@ -165,7 +165,7 @@ async fn agents_list_and_detail() {
     use_stub();
     let (status, body) = get_json("/agents").await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(body["agents"].as_array().unwrap().len(), 20);
+    assert_eq!(body["agents"].as_array().unwrap().len(), 22);
     let (status, body) = get_json("/agents/coder").await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body["name"], json!("coder"));
@@ -179,7 +179,7 @@ async fn departments_list() {
     use_stub();
     let (status, body) = get_json("/departments").await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(body["departments"].as_array().unwrap().len(), 10);
+    assert_eq!(body["departments"].as_array().unwrap().len(), 11);
 }
 
 #[tokio::test]
